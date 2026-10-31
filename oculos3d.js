@@ -5,9 +5,11 @@
    → a lente da Redonda cresce até ocupar a tela e revela a paisagem nítida.
    Os modelos (nome, cor, medida, material) ficam em MODELOS, logo abaixo.
    Se o 3D falhar, a seção mostra o título nítido e o site segue normal.
+   É um script comum (não "module") que carrega o three.js pelo importmap do index.html,
+   para funcionar também quando o index.html é aberto direto da pasta (file://).
    ============================================================ */
-import * as THREE from 'three';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+(function () {
+let THREE, RoomEnvironment;
 
 const MODELOS = [
   { nome: 'Quadrada', cor: 'Tartaruga', detalhe: 'Acetato tartaruga, polido à mão', medida: '52□19', forma: 'quadrada', material: 'tartaruga' },
@@ -30,7 +32,9 @@ const limitar = (v, a, b) => Math.min(Math.max(v, a), b);
 const suave = t => t * t * (3 - 2 * t);
 const faixa = (p, a, b) => limitar((p - a) / (b - a), 0, 1);
 
-try { iniciar(); } catch (e) { semTresD(e); }
+Promise.all([import('three'), import('three/addons/environments/RoomEnvironment.js')])
+  .then(([tres, ambiente]) => { THREE = tres; RoomEnvironment = ambiente.RoomEnvironment; iniciar(); })
+  .catch(semTresD);
 
 function semTresD(e) {
   if (e) console.warn('Experiência 3D desativada:', e);
@@ -318,3 +322,4 @@ function iniciar() {
   const comecar = () => { window.oculos3dOk = true; secao.classList.add('com-3d'); requestAnimationFrame(quadro); };
   (document.fonts && document.fonts.load ? document.fonts.load('800 120px Manrope') : Promise.resolve()).then(comecar, comecar);
 }
+})();

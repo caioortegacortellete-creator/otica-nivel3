@@ -55,12 +55,15 @@
   #exp-fundo, #exp-gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
   /* o fundo é a mesma cena das lentes, só que desfocada */
   #exp-fundo { filter: blur(var(--desfoque, 14px)); transform: scale(1.06); }
-  .exp-fallback { display: none; }
+  /* título nítido: aparece enquanto o 3D carrega e fica no lugar dele se o 3D falhar */
+  .exp-fallback { position: absolute; inset: 0; z-index: 1; display: flex; align-items: center; justify-content: center; text-align: center; font-family: var(--sans); font-weight: 800; font-size: min(17vw, 30vh); line-height: .84; letter-spacing: -.04em; color: var(--claro); }
+  .exp-fallback em { font-style: normal; color: var(--rubi); }
+  .exp.com-3d .exp-fallback { display: none; }
   .exp.sem-3d { height: 100vh; height: 100svh; }
   .exp.sem-3d canvas { display: none; }
   .exp.sem-3d .exp-fallback { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; font-family: var(--sans); font-weight: 800; font-size: min(17vw, 30vh); line-height: .84; letter-spacing: -.04em; }
   .exp.sem-3d .exp-fallback em { font-style: normal; color: var(--rubi); }
-  .exp:not(.com-3d):not(.sem-3d) .exp-hero { opacity: 0; }
+
   .exp-hero, .exp-modelo, .exp-final { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
   .exp-hero a, .exp-modelo a { pointer-events: auto; }
   .exp-sobre { position: absolute; left: 0; right: 0; top: 112px; text-align: center; font-size: 11px; font-weight: 700; letter-spacing: .32em; text-transform: uppercase; color: var(--claro-suave); }
@@ -835,7 +838,7 @@
   document.getElementById('ag-novo').addEventListener('click', () => agenda.classList.remove('enviado'));
 </script>
 <script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }</script>
-<script type="module" src="oculos3d.js"></script>
+<script src="oculos3d.js"></script>
 <script>
   // se o 3D não carregar (sem internet para a biblioteca, navegador antigo), mostra o título nítido
   setTimeout(() => { if (!window.oculos3dOk) document.getElementById('inicio').classList.add('sem-3d'); }, 6000);
