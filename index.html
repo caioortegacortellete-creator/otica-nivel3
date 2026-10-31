@@ -92,7 +92,8 @@
   .depois-hero { position: relative; z-index: 2; background: var(--creme); }
   /* óculos que sai da foto da loja e pousa no teste de estilo (oculos3d.js → iniciarVoo) */
   .voo-oculos { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 22; pointer-events: none; opacity: 0; }
-  .voo-origem { position: absolute; left: 4%; top: 73%; width: 64%; height: 17%; pointer-events: none; }
+  .voo-origem { position: absolute; left: 14.5%; top: 76%; width: 73%; height: 10%; pointer-events: none; }
+  .sobre-foto .moldura img.loja-limpa { position: absolute; inset: 0; opacity: var(--tirado, 0); }
   .voo-destino { display: block; width: 240px; height: 96px; margin: 0 0 30px; }
   @media (max-width: 920px) { .voo-destino { width: 180px; height: 72px; margin-bottom: 20px; } }
   @media (max-width: 920px) {
@@ -442,7 +443,7 @@
   <section class="sobre" id="sobre">
     <div class="container">
       <div class="sobre-foto revelar">
-        <div class="moldura revelar-img"><img src="loja.webp" alt="Armações expostas na Ótica Mirante"><span class="voo-origem" data-voo-origem aria-hidden="true"></span></div>
+        <div class="moldura revelar-img"><img src="loja.webp" alt="Armações expostas na Ótica Mirante"><img class="loja-limpa" src="loja-sem-oculos.webp" alt="" aria-hidden="true"><span class="voo-origem" data-voo-origem aria-hidden="true"></span></div>
         <svg class="selo-giro" viewBox="0 0 132 132" aria-hidden="true"><defs><path id="circulo" d="M66 66m-52 0a52 52 0 1 1 104 0a52 52 0 1 1-104 0"/></defs><text><textPath href="#circulo">Grau · Sol · Lentes · Maringá · 2012 ·</textPath></text></svg>
         <span class="selo-centro" aria-hidden="true"><svg viewBox="0 0 44 44"><g fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="15" cy="23" r="5.6"/><circle cx="29" cy="23" r="5.6"/><path d="M20.6 22.2c.9-1.2 1.9-1.2 2.8 0M9.4 22 8 19.5M34.6 22 36 19.5"/></g></svg></span>
       </div>

@@ -419,25 +419,32 @@ function iniciar() {
     }
     medirVoo(); addEventListener('resize', medirVoo);
     const centro = el => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width }; };
-    let desenhou = true;
+    // a foto da loja tem uma versão sem o óculos de baixo: ela aparece quando o óculos se solta
+    const fotoLoja = origemVoo.closest('.sobre-foto');
+    let desenhou = true, kSuave = null;
     (function passo(t) {
       requestAnimationFrame(passo);
       const a = centro(origemVoo), b = centro(destinoVoo);
-      // o voo vai de quando o óculos da foto passa de 62% da altura da tela até o destino chegar a 42%
-      const s0 = a.y + scrollY - VH * .62, s1 = b.y + scrollY - VH * .42;
-      const k = reduzir ? 1 : limitar((scrollY - s0) / Math.max(s1 - s0, 1), 0, 1), e = suave(k);
+      // o voo vai de quando o óculos da foto passa de 72% da altura da tela até o destino chegar a 45%
+      const s0 = a.y + scrollY - VH * .72, s1 = b.y + scrollY - VH * .45;
+      const alvo = reduzir ? 1 : limitar((scrollY - s0) / Math.max(s1 - s0, 1), 0, 1);
+      // o movimento segue a rolagem com atraso suave, para o voo ficar lento e sem trancos
+      kSuave = kSuave === null || reduzir ? alvo : kSuave + (alvo - kSuave) * .07;
+      const k = Math.abs(alvo - kSuave) < .0005 ? alvo : kSuave, e = suave(k);
+      fotoLoja.style.setProperty('--tirado', Math.min(k / .03, 1).toFixed(3));
       const naTela = y => y > -300 && y < VH + 300;
       if (k <= 0 || (k >= 1 && !naTela(b.y))) { if (desenhou) { rv.clear(); desenhou = false; } return; }
       desenhou = true;
       const arco = Math.sin(k * Math.PI);
-      const x = a.x + (b.x - a.x) * e + arco * VW * .16;
-      const y = a.y + (b.y - a.y) * e + (k >= 1 && !reduzir ? Math.sin(t / 900) * 4 : 0);
-      const largura = (a.w + (b.w - a.w) * e) * (1 + .4 * arco);
+      const x = a.x + (b.x - a.x) * e + arco * VW * .06;
+      const y = a.y + (b.y - a.y) * e + (k >= 1 && !reduzir ? Math.sin(t / 1300) * 3 : 0);
+      const largura = (a.w + (b.w - a.w) * e) * (1 + .12 * arco);
       voo.g.scale.setScalar(largura / LARG);
       voo.g.position.set(x - VW / 2, VH / 2 - y, 0);
-      // começa levemente virado (como o da foto), dá duas voltas e pousa de frente
-      voo.g.rotation.set(arco * .55 + (1 - e) * .08, -.35 * (1 - e) + e * Math.PI * 4, (1 - e) * -.1 + Math.sin(k * Math.PI * 2) * .22);
-      tela.style.opacity = Math.min(k / .04, 1);
+      // começa de lado, como está na foto (lentes para a direita, hastes para a esquerda),
+      // dá uma volta só, devagar, e pousa reto, de frente
+      voo.g.rotation.set(arco * .12, 1.15 * (1 - e) + e * Math.PI * 2, 0);
+      tela.style.opacity = Math.min(k / .03, 1);
       rv.render(cv, cam);
     })(performance.now());
   }
