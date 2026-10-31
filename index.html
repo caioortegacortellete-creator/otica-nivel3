@@ -90,6 +90,11 @@
   .exp-final h2 em { color: #fff; }
   .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
   .depois-hero { position: relative; z-index: 2; background: var(--creme); }
+  /* óculos que sai da foto da loja e pousa no teste de estilo (oculos3d.js → iniciarVoo) */
+  .voo-oculos { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 22; pointer-events: none; opacity: 0; }
+  .voo-origem { position: absolute; left: 4%; top: 73%; width: 64%; height: 17%; pointer-events: none; }
+  .voo-destino { display: block; width: 240px; height: 96px; margin: 0 0 30px; }
+  @media (max-width: 920px) { .voo-destino { width: 180px; height: 72px; margin-bottom: 20px; } }
   @media (max-width: 920px) {
     .exp { height: 640vh; }
     .exp-sobre { top: 96px; font-size: 10px; letter-spacing: .22em; padding: 0 20px; }
@@ -437,7 +442,7 @@
   <section class="sobre" id="sobre">
     <div class="container">
       <div class="sobre-foto revelar">
-        <div class="moldura revelar-img"><img src="loja.webp" alt="Armações expostas na Ótica Mirante"></div>
+        <div class="moldura revelar-img"><img src="loja.webp" alt="Armações expostas na Ótica Mirante"><span class="voo-origem" data-voo-origem aria-hidden="true"></span></div>
         <svg class="selo-giro" viewBox="0 0 132 132" aria-hidden="true"><defs><path id="circulo" d="M66 66m-52 0a52 52 0 1 1 104 0a52 52 0 1 1-104 0"/></defs><text><textPath href="#circulo">Grau · Sol · Lentes · Maringá · 2012 ·</textPath></text></svg>
         <span class="selo-centro" aria-hidden="true"><svg viewBox="0 0 44 44"><g fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="15" cy="23" r="5.6"/><circle cx="29" cy="23" r="5.6"/><path d="M20.6 22.2c.9-1.2 1.9-1.2 2.8 0M9.4 22 8 19.5M34.6 22 36 19.5"/></g></svg></span>
       </div>
@@ -467,7 +472,7 @@
           <p class="rotulo revelar">Produtos e serviços</p>
           <h2 class="revelar">O que você <em>encontra aqui.</em></h2>
         </div>
-        <p class="revelar">Cada produto tem uma página com explicações, indicações e respostas às dúvidas mais comuns.</p>
+        <div><span class="voo-destino" data-voo-destino aria-hidden="true"></span><p class="revelar">Cada produto tem uma página com explicações, indicações e respostas às dúvidas mais comuns.</p></div>
       </div>
       <div class="areas-grade" id="areas-grade"></div>
     </div>

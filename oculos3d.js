@@ -185,7 +185,8 @@ function iniciar() {
     tartaruga: new THREE.MeshPhysicalMaterial({ map: texturaTartaruga(), roughness: .22, clearcoat: 1, clearcoatRoughness: .05 }),
     rubi: new THREE.MeshPhysicalMaterial({ color: 0x7e0a18, roughness: .16, clearcoat: 1, clearcoatRoughness: .03 }),
     dourado: new THREE.MeshStandardMaterial({ color: 0xd8b06a, metalness: 1, roughness: .2 }),
-    titanio: new THREE.MeshStandardMaterial({ color: 0x1d1c20, metalness: .9, roughness: .32 })
+    titanio: new THREE.MeshStandardMaterial({ color: 0x1d1c20, metalness: .9, roughness: .32 }),
+    preto: new THREE.MeshPhysicalMaterial({ color: 0x0d0c0e, roughness: .16, clearcoat: 1, clearcoatRoughness: .04 })
   };
   const PRATA = new THREE.MeshStandardMaterial({ color: 0xd6d3d3, metalness: 1, roughness: .22 });
   const PONTEIRA = new THREE.MeshPhysicalMaterial({ color: 0x141213, roughness: .3, clearcoat: .7 });
@@ -209,8 +210,8 @@ function iniciar() {
     return g;
   }
 
-  /* ---------- Montagem de cada modelo ---------- */
-  function montar(modelo) {
+  /* ---------- Montagem de cada modelo (opcoes: outra cena e outro material de lente, usados no óculos que voa) ---------- */
+  function montar(modelo, opcoes = {}) {
     const g = new THREE.Group(), forma = modelo.forma, mat = MATERIAIS[modelo.material];
     const metal = forma === 'aviador' || forma === 'redonda';
     const sep = { classica: .72, gatinho: .73, aviador: .75, redonda: .66 }[forma];
@@ -268,15 +269,15 @@ function iniciar() {
 
     // lentes (vidro que mostra a versão nítida)
     for (const lado of [-1, 1]) {
-      const m = new THREE.Mesh(new THREE.ShapeGeometry(new THREE.Shape(espelhar(lente, lado, 0)), 1), materialLente());
-      m.position.set(sep * lado, 0, 0); m.renderOrder = -1;
+      const m = new THREE.Mesh(new THREE.ShapeGeometry(new THREE.Shape(espelhar(lente, lado, 0)), 1), opcoes.lente || materialLente());
+      m.position.set(sep * lado, 0, 0); m.renderOrder = opcoes.lente ? 1 : -1;
       g.add(m); lentesModelo.push(m);
     }
-    g.visible = false;
-    cena.add(g);
+    g.visible = !!opcoes.cena;
+    (opcoes.cena || cena).add(g);
     return { g, lentes: lentesModelo, sep };
   }
-  const oculos = MODELOS.map(montar);
+  const oculos = MODELOS.map(m => montar(m));
 
   /* ---------- Tamanhos ---------- */
   let visW = 1, visH = 1, base = 1;
@@ -387,6 +388,58 @@ function iniciar() {
     }
 
     renderer.render(cena, camera);
+  }
+
+  /* ---------- Óculos que sai da foto da loja, rodopia com a rolagem e pousa no teste de estilo ----------
+     Começa em cima do óculos de baixo da foto ([data-voo-origem]) e termina em [data-voo-destino].
+     Tem a sua própria camada (canvas fixo, sem cliques) e só desenha quando a origem ou o destino estão na tela. */
+  const origemVoo = document.querySelector('[data-voo-origem]'), destinoVoo = document.querySelector('[data-voo-destino]');
+  if (origemVoo && destinoVoo) {
+    try { iniciarVoo(); } catch (e) { console.warn('Voo do óculos desativado:', e); }
+  }
+  function iniciarVoo() {
+    const tela = document.createElement('canvas');
+    tela.className = 'voo-oculos'; tela.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(tela);
+    const rv = new THREE.WebGLRenderer({ canvas: tela, antialias: true, alpha: true });
+    rv.outputColorSpace = THREE.SRGBColorSpace; rv.toneMapping = THREE.ACESFilmicToneMapping; rv.toneMappingExposure = 1.15;
+    const cv = new THREE.Scene();
+    cv.environment = new THREE.PMREMGenerator(rv).fromScene(new RoomEnvironment(rv), .04).texture;
+    const l1 = new THREE.DirectionalLight(0xffffff, 2.2); l1.position.set(-300, 500, 600); cv.add(l1);
+    const l2 = new THREE.PointLight(0xe0313f, 2, 0, 0); l2.position.set(400, -300, 300); cv.add(l2);
+    const cam = new THREE.PerspectiveCamera(30, 1, 1, 10000);
+    const vidro = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: .04, transparent: true, opacity: .14, envMapIntensity: 1.6, depthWrite: false, side: THREE.DoubleSide });
+    const voo = montar({ forma: 'classica', material: 'preto' }, { cena: cv, lente: vidro });
+    const LARG = 2 * (voo.sep + .53 + .1);     // largura da frente do óculos, em unidades do modelo
+    let VW = 0, VH = 0;
+    function medirVoo() {
+      VW = innerWidth; VH = innerHeight;
+      rv.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); rv.setSize(VW, VH, false);
+      cam.aspect = VW / VH; cam.position.set(0, 0, VH / 2 / Math.tan(THREE.MathUtils.degToRad(15))); cam.updateProjectionMatrix();
+    }
+    medirVoo(); addEventListener('resize', medirVoo);
+    const centro = el => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width }; };
+    let desenhou = true;
+    (function passo(t) {
+      requestAnimationFrame(passo);
+      const a = centro(origemVoo), b = centro(destinoVoo);
+      // o voo vai de quando o óculos da foto passa de 62% da altura da tela até o destino chegar a 42%
+      const s0 = a.y + scrollY - VH * .62, s1 = b.y + scrollY - VH * .42;
+      const k = reduzir ? 1 : limitar((scrollY - s0) / Math.max(s1 - s0, 1), 0, 1), e = suave(k);
+      const naTela = y => y > -300 && y < VH + 300;
+      if (k <= 0 || (k >= 1 && !naTela(b.y))) { if (desenhou) { rv.clear(); desenhou = false; } return; }
+      desenhou = true;
+      const arco = Math.sin(k * Math.PI);
+      const x = a.x + (b.x - a.x) * e + arco * VW * .16;
+      const y = a.y + (b.y - a.y) * e + (k >= 1 && !reduzir ? Math.sin(t / 900) * 4 : 0);
+      const largura = (a.w + (b.w - a.w) * e) * (1 + .4 * arco);
+      voo.g.scale.setScalar(largura / LARG);
+      voo.g.position.set(x - VW / 2, VH / 2 - y, 0);
+      // começa levemente virado (como o da foto), dá duas voltas e pousa de frente
+      voo.g.rotation.set(arco * .55 + (1 - e) * .08, -.35 * (1 - e) + e * Math.PI * 4, (1 - e) * -.1 + Math.sin(k * Math.PI * 2) * .22);
+      tela.style.opacity = Math.min(k / .04, 1);
+      rv.render(cv, cam);
+    })(performance.now());
   }
 
   medir();
