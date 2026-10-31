@@ -1,24 +1,25 @@
 /* ============================================================
-   EXPERIÊNCIA 3D DO TOPO — um óculos 3D que coloca a página em foco.
-   Fora das lentes, o texto aparece desfocado; dentro delas, nítido e levemente ampliado.
-   Rolagem: o óculos se aproxima → troca de modelo (Quadrada, Gatinho, Aviador, Redonda)
-   → a lente da Redonda cresce até ocupar a tela e revela a paisagem nítida.
-   Os modelos (nome, cor, medida, material) ficam em MODELOS, logo abaixo.
-   Se o 3D falhar, a seção mostra o título nítido e o site segue normal.
+   EXPERIÊNCIA 3D DO TOPO — um óculos 3D, visto de lado, que coloca a página em foco.
+   Fora das lentes, as palavras ficam desfocadas e crescem ao fundo; dentro delas, nítidas e ampliadas.
+   Rolagem: o óculos se aproxima → troca de modelo (Clássica, Gatinho, Aviador, Redonda)
+   → a lente da Redonda cresce até ocupar a tela, com a paisagem nítida só dentro dela.
+   Os modelos (nome, cor, detalhe, medida, forma, material) ficam em MODELOS, logo abaixo.
    É um script comum (não "module") que carrega o three.js pelo importmap do index.html,
    para funcionar também quando o index.html é aberto direto da pasta (file://).
+   Se o 3D falhar, a seção mostra o título nítido e o site segue normal.
    ============================================================ */
 (function () {
 let THREE, RoomEnvironment;
 
 const MODELOS = [
-  { nome: 'Quadrada', cor: 'Tartaruga', detalhe: 'Acetato tartaruga, polido à mão', medida: '52□19', forma: 'quadrada', material: 'tartaruga' },
-  { nome: 'Gatinho', cor: 'Preto brilhante', detalhe: 'Acetato preto de brilho intenso', medida: '53□17', forma: 'gatinho', material: 'preto' },
-  { nome: 'Aviador', cor: 'Vermelho rubi', detalhe: 'Metal leve, ponte dupla', medida: '57□15', forma: 'aviador', material: 'rubi' },
-  { nome: 'Redonda', cor: 'Cristal', detalhe: 'Acetato transparente, leve como nada', medida: '49□21', forma: 'redonda', material: 'cristal' }
+  { nome: 'Clássica', cor: 'Tartaruga', detalhe: 'Acetato polido à mão, ponte esculpida', medida: '52□19', forma: 'classica', material: 'tartaruga' },
+  { nome: 'Gatinho', cor: 'Vermelho rubi', detalhe: 'Acetato translúcido, ponta levantada', medida: '53□17', forma: 'gatinho', material: 'rubi' },
+  { nome: 'Aviador', cor: 'Dourado', detalhe: 'Metal leve, ponte dupla e plaquetas', medida: '57□15', forma: 'aviador', material: 'dourado' },
+  { nome: 'Redonda', cor: 'Titânio preto', detalhe: 'Aro fino, leve como nada', medida: '49□21', forma: 'redonda', material: 'titanio' }
 ];
 const FRASE = ['Tudo', 'em', 'foco'];
 const FOTO_FINAL = 'paisagem.jpg';
+const ANGULO = -.42;  // quanto o óculos fica virado de lado (radianos), para as hastes aparecerem
 
 const secao = document.getElementById('inicio');
 const palco = secao.querySelector('.exp-palco');
@@ -47,16 +48,17 @@ function iniciar() {
   const renderer = new THREE.WebGLRenderer({ canvas: glc, antialias: true, alpha: true, powerPreference: 'high-performance' });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
+  renderer.toneMappingExposure = 1.1;
   const cena = new THREE.Scene();
   const pmrem = new THREE.PMREMGenerator(renderer);
   cena.environment = pmrem.fromScene(new RoomEnvironment(renderer), .04).texture;
-  const camera = new THREE.PerspectiveCamera(30, 1, .1, 400);
+  const camera = new THREE.PerspectiveCamera(28, 1, .1, 400);
   camera.position.set(0, 0, 10);
-  const luz = new THREE.DirectionalLight(0xffffff, 1.6); luz.position.set(3, 4, 6); cena.add(luz);
-  const luzRubi = new THREE.PointLight(0xe0313f, 14, 30); luzRubi.position.set(-4, -2.5, 3); cena.add(luzRubi);
+  const luz = new THREE.DirectionalLight(0xffffff, 2); luz.position.set(-3, 5, 6); cena.add(luz);
+  const recorte = new THREE.DirectionalLight(0xffffff, 1.2); recorte.position.set(5, 1, -4); cena.add(recorte);
+  const luzRubi = new THREE.PointLight(0xe0313f, 16, 30); luzRubi.position.set(4, -2.5, 3); cena.add(luzRubi);
 
-  /* ---------- Texto e fotos desenhados em 2D: uma versão desfocada (fundo) e outra nítida (vista pelas lentes) ---------- */
+  /* ---------- Palavras e foto desenhadas em 2D: uma versão desfocada (fundo) e outra nítida (vista pelas lentes) ---------- */
   const nitido = document.createElement('canvas');
   const ctxF = fundo.getContext('2d'), ctxN = nitido.getContext('2d');
   let texN = null, W = 0, H = 0, dpr = 1;
@@ -64,13 +66,14 @@ function iniciar() {
   foto.onload = () => { fotoPronta = true; chaveCena = ''; };
   foto.src = FOTO_FINAL;
 
-  function desenharTexto(ctx, w, h, linhas) {
-    const n = linhas.length;
-    const retrato = w / h < .9;
+  function desenharTexto(ctx, w, h, linhas, escala) {
+    const n = linhas.length, retrato = w / h < .9;
     let tam = n > 1 ? (retrato ? Math.min(w * .3, h * .17) : Math.min(w * .17, h * .28)) : (retrato ? w * .3 : Math.min(w * .16, h * .32));
     ctx.font = `800 ${tam}px Manrope, system-ui, sans-serif`;
     const maior = Math.max(...linhas.map(l => ctx.measureText(l).width));
-    if (maior > w * .92) { tam *= w * .92 / maior; ctx.font = `800 ${tam}px Manrope, system-ui, sans-serif`; }
+    if (maior > w * .92) tam *= w * .92 / maior;
+    tam *= escala;
+    ctx.font = `800 ${tam}px Manrope, system-ui, sans-serif`;
     const alt = tam * .84, y0 = h * .5 - (n - 1) * alt / 2;
     ctx.fillStyle = '#f5f1ec'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     linhas.forEach((l, i) => ctx.fillText(l, w / 2, y0 + i * alt + tam * .04));
@@ -89,36 +92,38 @@ function iniciar() {
     ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
     if ('letterSpacing' in ctx) ctx.letterSpacing = '-0.02em';
     camadas.forEach(c => {
-      if (c.alfa <= 0.001) return;
+      if (c.alfa <= .001) return;
       ctx.globalAlpha = c.alfa;
-      if (c.foto) desenharFoto(ctx, w, h); else desenharTexto(ctx, w, h, c.linhas);
+      if (c.foto) desenharFoto(ctx, w, h); else desenharTexto(ctx, w, h, c.linhas, c.escala || 1);
     });
     ctx.globalAlpha = 1;
   }
+  const chave = camadas => camadas.map(c => (c.foto ? 'F' : c.linhas.join(' ') + '@' + (c.escala || 1).toFixed(3)) + ':' + c.alfa.toFixed(3)).join(';');
   let chaveCena = '';
-  function atualizarCena(camadas) {
-    const chave = W + 'x' + H + '|' + fotoPronta + '|' + camadas.map(c => (c.foto ? 'F' : c.linhas.join(' ')) + ':' + c.alfa.toFixed(3)).join(';');
-    if (chave === chaveCena) return;
-    chaveCena = chave;
-    pintar(ctxF, camadas); pintar(ctxN, camadas);
+  function atualizarCena(noFundo, nasLentes) {
+    const k = W + 'x' + H + '|' + fotoPronta + '|' + chave(noFundo) + '||' + chave(nasLentes);
+    if (k === chaveCena) return;
+    chaveCena = k;
+    pintar(ctxF, noFundo); pintar(ctxN, nasLentes);
     texN.needsUpdate = true;
   }
 
-  /* ---------- Lentes: mostram a versão nítida, com leve ampliação a partir do centro de cada lente ---------- */
+  /* ---------- Lentes: mostram a versão nítida, ampliada a partir do centro de cada lente, com reflexo de vidro ---------- */
   const lentes = [];
   function materialLente() {
     const m = new THREE.ShaderMaterial({
-      uniforms: { uTex: { value: null }, uRes: { value: new THREE.Vector2(1, 1) }, uCentro: { value: new THREE.Vector2() }, uZoom: { value: 1.08 } },
+      uniforms: { uTex: { value: null }, uRes: { value: new THREE.Vector2(1, 1) }, uCentro: { value: new THREE.Vector2() }, uZoom: { value: 1.1 } },
       vertexShader: 'varying vec2 vPos; void main(){ vPos = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
       fragmentShader: `
         uniform sampler2D uTex; uniform vec2 uRes; uniform vec2 uCentro; uniform float uZoom; varying vec2 vPos;
         void main(){
           vec2 q = uCentro + (gl_FragCoord.xy - uCentro) / uZoom;
           vec3 c = texture2D(uTex, q / uRes).rgb;
-          float r = length(vPos) / .5;
-          c *= 1.0 - smoothstep(.6, 1.1, r) * .3;
-          float d = vPos.x + vPos.y * .7;
-          c += smoothstep(.05, .0, abs(d - .16)) * .08 + smoothstep(.025, .0, abs(d - .27)) * .05;
+          float r = length(vPos / vec2(.55, .45));
+          c *= 1.0 - smoothstep(.75, 1.05, r) * .25;
+          float d = vPos.x * .8 + vPos.y;
+          c += smoothstep(.09, .0, abs(d - .22)) * .07 + smoothstep(.035, .0, abs(d - .38)) * .05;
+          c += vec3(.03, .02, .02) * smoothstep(.2, -.4, vPos.y);
           gl_FragColor = vec4(c, 1.0);
         }`,
       side: THREE.DoubleSide, toneMapped: false
@@ -127,93 +132,143 @@ function iniciar() {
     return m;
   }
 
-  /* ---------- Formas das lentes (cada uma com ~1 unidade de largura, centrada no zero) ---------- */
-  function formaLente(tipo, lado) {
-    const s = new THREE.Shape(), X = x => x * lado;
-    if (tipo === 'redonda') { s.absarc(0, 0, .47, 0, Math.PI * 2, false); return s; }
-    if (tipo === 'quadrada') {
-      const w = .5, h = .41, r = .17;
-      s.moveTo(-w + r, -h); s.lineTo(w - r, -h); s.quadraticCurveTo(w, -h, w, -h + r); s.lineTo(w, h - r); s.quadraticCurveTo(w, h, w - r, h);
-      s.lineTo(-w + r, h); s.quadraticCurveTo(-w, h, -w, h - r); s.lineTo(-w, -h + r); s.quadraticCurveTo(-w, -h, -w + r, -h);
-      return s;
+  /* ---------- Desenho das lentes (lente direita, ~1 unidade de largura, sentido anti-horário, t = 0 aponta para fora) ---------- */
+  const se = (v, n) => Math.sign(v) * Math.pow(Math.abs(v), 2 / n);
+  function contornoLente(forma) {
+    const N = 180, pts = [];
+    for (let i = 0; i < N; i++) {
+      const t = i / N * Math.PI * 2, c = Math.cos(t), s = Math.sin(t);
+      let x, y;
+      if (forma === 'redonda') { x = .45 * c; y = .45 * s; }
+      else if (forma === 'classica') { x = .53 * se(c, 3.4); y = .39 * se(s, 3.4); x *= 1 + .08 * (y / .39); if (y > 0) y += .035 * (x / .53); }
+      else if (forma === 'gatinho') { x = .54 * se(c, 2.8); y = .36 * se(s, 2.8); const u = Math.max(0, x / .54); y += y > 0 ? .17 * u * u * u : .03 * u * u; }
+      else { x = .55 * se(c, 2.3); y = .45 * se(s, 2.3); if (y > 0) y *= .7; else x += .1 * (-y / .45) * (x > 0 ? 1 : .35); } // aviador: gota
+      pts.push(new THREE.Vector2(x, y));
     }
-    if (tipo === 'gatinho') {
-      s.moveTo(X(-.46), .04);
-      s.bezierCurveTo(X(-.46), .30, X(-.15), .35, X(.18), .32);
-      s.bezierCurveTo(X(.40), .30, X(.58), .46, X(.55), .2);
-      s.bezierCurveTo(X(.52), -.10, X(.36), -.36, X(.04), -.36);
-      s.bezierCurveTo(X(-.30), -.36, X(-.46), -.22, X(-.46), .04);
-      return s;
-    }
-    // aviador: gota, mais larga embaixo e para fora
-    s.moveTo(X(-.44), .30);
-    s.bezierCurveTo(X(-.20), .36, X(.30), .36, X(.50), .28);
-    s.bezierCurveTo(X(.62), .00, X(.42), -.47, X(.06), -.49);
-    s.bezierCurveTo(X(-.30), -.49, X(-.48), -.12, X(-.44), .30);
-    return s;
+    return pts;
   }
-  const MEIA = { quadrada: .5, gatinho: .55, aviador: .56, redonda: .47 };
-  const ARO = { quadrada: 1.13, gatinho: 1.12, aviador: 1.05, redonda: 1.1 };
-  const SEP = .68;
+  function deslocar(pts, esp) {
+    const N = pts.length;
+    return pts.map((p, i) => {
+      const a = pts[(i - 1 + N) % N], b = pts[(i + 1) % N];
+      const tx = b.x - a.x, ty = b.y - a.y, L = Math.hypot(tx, ty) || 1, e = esp(i / N * Math.PI * 2);
+      return new THREE.Vector2(p.x + ty / L * e, p.y - tx / L * e);
+    });
+  }
+  const espelhar = (pts, lado, sep) => pts.map(p => new THREE.Vector2(p.x * lado + sep * lado, p.y));
 
   /* ---------- Materiais ---------- */
   function texturaTartaruga() {
     const c = document.createElement('canvas'); c.width = c.height = 512;
     const x = c.getContext('2d');
-    x.fillStyle = '#1c0b05'; x.fillRect(0, 0, 512, 512);
-    const cores = ['rgba(120,52,16,', 'rgba(168,88,30,', 'rgba(58,22,8,', 'rgba(8,3,2,'];
-    let semente = 7; const aleatorio = () => (semente = (semente * 16807) % 2147483647) / 2147483647;
-    for (let i = 0; i < 260; i++) {
-      const px = aleatorio() * 512, py = aleatorio() * 512, r = 5 + aleatorio() * 26, cor = cores[i % 4];
+    const fundoG = x.createLinearGradient(0, 0, 512, 512); fundoG.addColorStop(0, '#3a1a0a'); fundoG.addColorStop(1, '#1d0c05');
+    x.fillStyle = fundoG; x.fillRect(0, 0, 512, 512);
+    const cores = ['rgba(176,98,34,', 'rgba(214,142,58,', 'rgba(96,40,12,', 'rgba(10,4,2,'];
+    let semente = 11; const aleatorio = () => (semente = (semente * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < 220; i++) {
+      const px = aleatorio() * 512, py = aleatorio() * 512, r = 6 + aleatorio() * 38, cor = cores[i % 4];
       const g = x.createRadialGradient(px, py, 0, px, py, r);
-      g.addColorStop(0, cor + (.35 + aleatorio() * .4) + ')'); g.addColorStop(1, cor + '0)');
-      x.fillStyle = g; x.beginPath(); x.ellipse(px, py, r, r * (.45 + aleatorio() * .6), aleatorio() * 3, 0, Math.PI * 2); x.fill();
+      g.addColorStop(0, cor + (.3 + aleatorio() * .45) + ')'); g.addColorStop(1, cor + '0)');
+      x.fillStyle = g; x.beginPath(); x.ellipse(px, py, r * 1.8, r * (.35 + aleatorio() * .4), -.5 + aleatorio() * .4, 0, Math.PI * 2); x.fill();
     }
     const t = new THREE.CanvasTexture(c);
-    t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2.4, 2.4);
+    t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(.55, .55);
     return t;
   }
   const MATERIAIS = {
-    tartaruga: new THREE.MeshPhysicalMaterial({ map: texturaTartaruga(), roughness: .3, clearcoat: 1, clearcoatRoughness: .08 }),
-    preto: new THREE.MeshPhysicalMaterial({ color: 0x0e0d0f, roughness: .2, clearcoat: 1, clearcoatRoughness: .04 }),
-    rubi: new THREE.MeshPhysicalMaterial({ color: 0xa3121f, roughness: .22, metalness: .35, clearcoat: 1, clearcoatRoughness: .05 }),
-    cristal: new THREE.MeshPhysicalMaterial({ color: 0xf1f4f6, roughness: .04, transparent: true, opacity: .58, clearcoat: 1, envMapIntensity: 2.4, depthWrite: false })
+    tartaruga: new THREE.MeshPhysicalMaterial({ map: texturaTartaruga(), roughness: .22, clearcoat: 1, clearcoatRoughness: .05 }),
+    rubi: new THREE.MeshPhysicalMaterial({ color: 0x7e0a18, roughness: .16, clearcoat: 1, clearcoatRoughness: .03 }),
+    dourado: new THREE.MeshStandardMaterial({ color: 0xd8b06a, metalness: 1, roughness: .2 }),
+    titanio: new THREE.MeshStandardMaterial({ color: 0x1d1c20, metalness: .9, roughness: .32 })
   };
-  const METAL = new THREE.MeshStandardMaterial({ color: 0xd0cccc, metalness: 1, roughness: .28 });
+  const PRATA = new THREE.MeshStandardMaterial({ color: 0xd6d3d3, metalness: 1, roughness: .22 });
+  const PONTEIRA = new THREE.MeshPhysicalMaterial({ color: 0x141213, roughness: .3, clearcoat: .7 });
+  const PLAQUETA = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: .1, transparent: true, opacity: .5 });
+
+  /* ---------- Peças ---------- */
+  function tubo(pontos, raio, mat, fechado) {
+    const curva = new THREE.CatmullRomCurve3(pontos, !!fechado, 'centripetal');
+    return new THREE.Mesh(new THREE.TubeGeometry(curva, fechado ? 220 : 48, raio, 12, !!fechado), mat);
+  }
+  // haste: sai da dobradiça para trás, abre um pouco para fora e faz a curva da orelha no fim
+  function haste(x, y, lado, comp, raio, mat, ponta) {
+    const ab = .1 * lado;
+    const pts = [[0, 0, 0], [ab * .3, -.01, -comp * .3], [ab * .7, -.03, -comp * .62], [ab, -.07, -comp * .86], [ab * 1.05, -.2, -comp * 1], [ab * 1.05, -.38, -comp * 1.05]]
+      .map(([a, b, c]) => new THREE.Vector3(x + a, y + b, c - .05));
+    const g = new THREE.Group();
+    const corpo = tubo(pts.slice(0, ponta ? 4 : 6), raio, mat);
+    if (!ponta) { corpo.geometry.translate(-x, -y, 0); corpo.geometry.scale(.65, 1.7, 1); corpo.geometry.translate(x, y, 0); }
+    g.add(corpo);
+    if (ponta) g.add(tubo(pts.slice(3), raio * 1.5, PONTEIRA));
+    return g;
+  }
 
   /* ---------- Montagem de cada modelo ---------- */
   function montar(modelo) {
-    const g = new THREE.Group(), mat = MATERIAIS[modelo.material], meia = MEIA[modelo.forma], k = ARO[modelo.forma];
-    const fino = modelo.forma === 'aviador';
-    const extrusao = { depth: fino ? .03 : .07, bevelEnabled: true, bevelThickness: fino ? .02 : .035, bevelSize: fino ? .018 : .03, bevelSegments: 4, curveSegments: 12 };
+    const g = new THREE.Group(), forma = modelo.forma, mat = MATERIAIS[modelo.material];
+    const metal = forma === 'aviador' || forma === 'redonda';
+    const sep = { classica: .72, gatinho: .73, aviador: .75, redonda: .66 }[forma];
+    const lente = contornoLente(forma);
+    const meiaL = Math.max(...lente.map(p => p.x));
     const lentesModelo = [];
-    for (const lado of [-1, 1]) {
-      const f = formaLente(modelo.forma, lado), pts = f.getPoints(120);
-      const aro = new THREE.Shape(pts.map(p => new THREE.Vector2(p.x * k, p.y * k)));
-      aro.holes.push(new THREE.Path(pts));
-      const geo = new THREE.ExtrudeGeometry(aro, extrusao); geo.translate(0, 0, -extrusao.depth / 2);
-      const m = new THREE.Mesh(geo, mat); m.position.x = SEP * lado; g.add(m);
-      const lente = new THREE.Mesh(new THREE.ShapeGeometry(f, 64), materialLente());
-      lente.position.set(SEP * lado, 0, 0); lente.renderOrder = -1; g.add(lente); lentesModelo.push(lente);
-      // haste e dobradiça
-      const hx = SEP * lado + lado * (meia * k - .03), hy = fino ? .26 : .2;
-      const haste = new THREE.Mesh(new THREE.BoxGeometry(fino ? .03 : .055, fino ? .035 : .075, 2.2), fino ? METAL : mat);
-      haste.position.set(hx, hy, -1.12); g.add(haste);
-      const dob = new THREE.Mesh(new THREE.BoxGeometry(.12, .1, .14), METAL); dob.position.set(hx, hy, -.05); g.add(dob);
-      // plaquetas (só nos de metal)
-      if (fino) { const pl = new THREE.Mesh(new THREE.SphereGeometry(.05, 12, 8), METAL); pl.scale.set(.6, 1, .4); pl.position.set(lado * (SEP - meia + .1), -.12, -.12); g.add(pl); }
+
+    if (!metal) {
+      // frente inteiriça de acetato: aros com sobrancelha mais grossa, ponte esculpida, furos das lentes
+      const off = deslocar(lente, t => {
+        const s = Math.sin(t), c = Math.cos(t);
+        return .07 + .075 * Math.pow(Math.max(0, s), 1.3) + (forma === 'gatinho' ? .07 * Math.max(0, c) * Math.max(0, s) : .015 * Math.max(0, c));
+      });
+      const N = off.length, a = .62;
+      const idx = t => Math.round((((t % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)) / (2 * Math.PI) * N) % N;
+      const iTopo = idx(Math.PI - a), iBase = idx(Math.PI + a);
+      const dir = [];
+      for (let k = iTopo; ; k = (k - 1 + N) % N) { dir.push(new THREE.Vector2(off[k].x + sep, off[k].y)); if (k === iBase) break; }
+      const esq = dir.map(p => new THREE.Vector2(-p.x, p.y)).reverse();
+      const rt = dir[0], rb = dir[dir.length - 1];
+      const s = new THREE.Shape();
+      s.moveTo(rt.x, rt.y); dir.slice(1).forEach(p => s.lineTo(p.x, p.y));
+      s.quadraticCurveTo(0, 2 * (rt.y - .17) - rb.y, -rb.x, rb.y);           // arco do nariz
+      esq.slice(1).forEach(p => s.lineTo(p.x, p.y));
+      s.quadraticCurveTo(0, rt.y - .015, rt.x, rt.y);                        // topo da ponte
+      for (const lado of [-1, 1]) s.holes.push(new THREE.Path(espelhar(lente, lado, sep)));
+      const geo = new THREE.ExtrudeGeometry(s, { depth: .06, bevelEnabled: true, bevelThickness: .035, bevelSize: .028, bevelSegments: 6, steps: 1 });
+      geo.translate(0, 0, -.03);
+      g.add(new THREE.Mesh(geo, mat));
+      // dobradiças e hastes
+      for (const lado of [-1, 1]) {
+        const xh = lado * (sep + meiaL + .08), yh = .17;
+        const dob = new THREE.Mesh(new THREE.BoxGeometry(.08, .1, .16), PRATA); dob.position.set(xh - lado * .02, yh, -.1); g.add(dob);
+        g.add(haste(xh, yh, lado, 2.3, .034, mat, false));
+      }
+    } else {
+      // armação de metal: aros finos, ponte, plaquetas e hastes com ponteira
+      const r = .021;
+      for (const lado of [-1, 1]) {
+        const p = espelhar(lente, lado, sep).map(v => new THREE.Vector3(v.x, v.y, 0));
+        g.add(tubo(p, r, mat, true));
+        // ligação do aro até a dobradiça
+        const xo = lado * (sep + meiaL), yo = forma === 'aviador' ? .24 : .12;
+        g.add(tubo([new THREE.Vector3(xo - lado * .02, yo, 0), new THREE.Vector3(xo + lado * .07, yo + .01, -.04), new THREE.Vector3(xo + lado * .09, yo, -.12)], r * .9, mat));
+        g.add(haste(xo + lado * .09, yo, lado, 2.3, .017, mat, true));
+        // plaqueta (apoio do nariz)
+        const xp = lado * (sep - meiaL + .1);
+        g.add(tubo([new THREE.Vector3(lado * (sep - meiaL + .02), .02, 0), new THREE.Vector3(xp - lado * .02, -.08, -.08), new THREE.Vector3(xp - lado * .03, -.14, -.14)], .008, PRATA));
+        const pl = new THREE.Mesh(new THREE.SphereGeometry(.06, 16, 12), PLAQUETA); pl.scale.set(.45, 1, .3); pl.position.set(xp - lado * .03, -.2, -.15); g.add(pl);
+      }
+      const xi = sep - meiaL + .005;
+      g.add(tubo([new THREE.Vector3(-xi, .1, 0), new THREE.Vector3(0, .19, .02), new THREE.Vector3(xi, .1, 0)], r, mat));
+      if (forma === 'aviador') g.add(tubo([new THREE.Vector3(-xi - .12, .31, 0), new THREE.Vector3(0, .33, .01), new THREE.Vector3(xi + .12, .31, 0)], r * .85, mat));
     }
-    // ponte
-    const xi = SEP - meia * k + .04, yp = modelo.forma === 'redonda' ? .06 : .12;
-    const curva = new THREE.CatmullRomCurve3([new THREE.Vector3(-xi, yp, 0), new THREE.Vector3(0, yp + .1, .03), new THREE.Vector3(xi, yp, 0)]);
-    g.add(new THREE.Mesh(new THREE.TubeGeometry(curva, 24, fino ? .022 : .045, 10), fino ? METAL : mat));
-    if (fino) { // ponte dupla do aviador
-      const reta = new THREE.CatmullRomCurve3([new THREE.Vector3(-xi - .02, .33, 0), new THREE.Vector3(0, .34, .01), new THREE.Vector3(xi + .02, .33, 0)]);
-      g.add(new THREE.Mesh(new THREE.TubeGeometry(reta, 16, .02, 8), METAL));
+
+    // lentes (vidro que mostra a versão nítida)
+    for (const lado of [-1, 1]) {
+      const m = new THREE.Mesh(new THREE.ShapeGeometry(new THREE.Shape(espelhar(lente, lado, 0)), 1), materialLente());
+      m.position.set(sep * lado, 0, 0); m.renderOrder = -1;
+      g.add(m); lentesModelo.push(m);
     }
     g.visible = false;
     cena.add(g);
-    return { g, lentes: lentesModelo };
+    return { g, lentes: lentesModelo, sep };
   }
   const oculos = MODELOS.map(montar);
 
@@ -226,13 +281,12 @@ function iniciar() {
     renderer.setPixelRatio(dpr); renderer.setSize(W, H, false);
     camera.aspect = W / H; camera.updateProjectionMatrix();
     visH = 2 * camera.position.z * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)); visW = visH * camera.aspect;
-    const larg = 2 * SEP + 2 * .56 * 1.2;
-    base = Math.min((W / H < .9 ? .84 : .4) * visW / larg, visH * .36);
+    base = Math.min((W / H < .9 ? .92 : .5) * visW / 2.9, visH * .38);
     if (texN) texN.dispose();
     texN = new THREE.CanvasTexture(nitido);
     texN.generateMipmaps = false; texN.minFilter = THREE.LinearFilter;
     lentes.forEach(m => { m.uniforms.uTex.value = texN; m.uniforms.uRes.value.set(bw, bh); });
-    fundo.style.setProperty('--desfoque', Math.round(Math.min(W, H) * .02) + 'px');
+    fundo.style.setProperty('--desfoque', Math.round(Math.min(W, H) * .018) + 'px');
     chaveCena = '';
   }
 
@@ -254,7 +308,7 @@ function iniciar() {
 
     // entrada: o óculos chega girando depois da tela de abertura
     if (inicioIntro === null && document.body.classList.contains('pronto')) inicioIntro = t;
-    const intro = reduzir ? 1 : inicioIntro === null ? 0 : suave(limitar((t - inicioIntro) / 1800, 0, 1));
+    const intro = reduzir ? 1 : inicioIntro === null ? 0 : suave(limitar((t - inicioIntro) / 1900, 0, 1));
 
     // fases da rolagem
     const aprox = suave(faixa(p, .05, .15)) * (1 - suave(faixa(p, .17, .25)));
@@ -264,44 +318,50 @@ function iniciar() {
     const mergulho = faixa(p, .8, .97), mg = suave(mergulho);
     const atual = p < .26 ? 0 : (troca > .5 ? m + 1 : m);
 
-    // texto ao fundo
-    const camadas = [];
-    const heroParaModelo = faixa(p, .19, .26);
+    // palavras: crescem ao fundo (desfocadas) e ficam nítidas nas lentes; no mergulho, a paisagem aparece só dentro da lente
+    const hp = faixa(p, .19, .26);
+    let noFundo, nasLentes;
     if (p < .26) {
-      camadas.push({ linhas: FRASE, alfa: 1 - heroParaModelo }, { linhas: [MODELOS[0].nome], alfa: heroParaModelo });
+      noFundo = [{ linhas: FRASE, alfa: 1 - hp, escala: (.84 + .16 * intro) * (1 + .32 * aprox + .25 * hp) }, { linhas: [MODELOS[0].nome], alfa: hp, escala: .85 + .15 * hp }];
+      nasLentes = noFundo;
     } else if (mergulho > 0) {
-      const ff = faixa(mergulho, .12, .45);
-      camadas.push({ linhas: [MODELOS[3].nome], alfa: 1 - ff }, { foto: true, alfa: ff });
+      const ff = faixa(mergulho, .1, .4);
+      const palavra = { linhas: [MODELOS[3].nome], alfa: 1 - faixa(mergulho, .05, .45), escala: 1 + .9 * mg };
+      noFundo = [palavra];
+      nasLentes = [{ ...palavra, alfa: 1 - ff }, { foto: true, alfa: ff }];
     } else {
-      camadas.push({ linhas: [MODELOS[m].nome], alfa: 1 - troca });
-      if (m < 3) camadas.push({ linhas: [MODELOS[m + 1].nome], alfa: troca });
+      noFundo = [{ linhas: [MODELOS[m].nome], alfa: 1 - troca, escala: 1 + .25 * troca }];
+      if (m < 3) noFundo.push({ linhas: [MODELOS[m + 1].nome], alfa: troca, escala: .85 + .15 * troca });
+      nasLentes = noFundo;
     }
-    atualizarCena(camadas);
+    atualizarCena(noFundo, nasLentes);
 
-    // qual óculos aparece e como ele está posicionado
+    // qual óculos aparece e como ele está posicionado (de lado, com as hastes à mostra)
     oculos.forEach((o, i) => { o.g.visible = i === atual; });
-    const o = oculos[atual].g;
-    rx += ((reduzir ? 0 : my) * .16 - rx) * .06; ry += ((reduzir ? 0 : mx) * .32 - ry) * .06;
+    const oc = oculos[atual], o = oc.g;
+    rx += ((reduzir ? 0 : my) * .14 - rx) * .06; ry += ((reduzir ? 0 : mx) * .28 - ry) * .06;
     const giroTroca = troca < .5 ? troca * Math.PI : (troca - 1) * Math.PI;
     const flutua = reduzir ? 0 : Math.sin(t / 1100) * .04;
-    let s = base * (1 + .55 * aprox) * (.55 + .45 * intro);
-    let x = 0, y = flutua * (1 - mg);
+    const lado = ANGULO * (1 - .45 * aprox);
+    let s = base * (1 + .5 * aprox) * (.6 + .4 * intro);
+    let x = .25 * base * (1 - aprox), y = flutua * (1 - mg) - .05 * base;
     if (mergulho > 0) {
       const meiaDiag = Math.hypot(visW, visH) / 2;
-      const alvo = meiaDiag / (.47 * base) * 1.25;
+      const alvo = meiaDiag / (.45 * base) * 1.3;
       s = base * Math.pow(alvo, mg);
-      x = -SEP * s * suave(faixa(mergulho, 0, .35));
+      x = x * (1 - mg) - oc.sep * s * suave(faixa(mergulho, 0, .3));
+      y *= 1 - mg;
     }
     o.scale.setScalar(s);
     o.position.set(x, y, 0);
-    o.rotation.set(rx * (1 - mg), (ry + giroTroca) * (1 - mg) - (1 - intro) * 2.6, (reduzir ? 0 : Math.sin(t / 1700) * .02) * (1 - mg));
+    o.rotation.set((.1 + rx) * (1 - mg), (lado + ry + giroTroca) * (1 - mg) - (1 - intro) * 2.8, (reduzir ? 0 : Math.sin(t / 1700) * .02) * (1 - mg));
 
     // centro de cada lente na tela, para a ampliação partir dele
     const bw = W * dpr, bh = H * dpr;
-    oculos[atual].lentes.forEach(l => {
+    oc.lentes.forEach(l => {
       l.getWorldPosition(v); v.project(camera);
       l.material.uniforms.uCentro.value.set((v.x + 1) / 2 * bw, (v.y + 1) / 2 * bh);
-      l.material.uniforms.uZoom.value = (1.07 + .38 * aprox) * (1 - mg) + mg;
+      l.material.uniforms.uZoom.value = (1.1 + .3 * aprox) * (1 - mg) + mg;
     });
 
     // textos sobre a cena
