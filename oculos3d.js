@@ -18,9 +18,10 @@ const MODELOS = [
   { nome: 'Redonda', cor: 'Titânio preto', detalhe: 'Aro fino, leve como nada', medida: '49□21', forma: 'redonda', material: 'titanio' }
 ];
 const FRASE = ['Tudo', 'em', 'foco'];
-// no último modelo, a paisagem entra ao fundo e esta frase (de venda) ocupa o lugar do nome do modelo
+// no último modelo, esta frase (de venda) fica do lado de fora, desfocada, e a paisagem aparece dentro das lentes
 const FRASE_FINAL = ['Enxergue', 'cada detalhe.'];
-const FOTO_FINAL = 'paisagem.jpg';
+// aberto direto da pasta (file://), o navegador bloqueia a foto local dentro do 3D; nesse caso usa a mesma foto do Unsplash
+const FOTO_FINAL = location.protocol === 'file:' ? 'https://images.unsplash.com/photo-1650493359585-f394207e8460?w=2200&q=82&auto=format' : 'paisagem.jpg';
 const ANGULO = 0;     // giro do óculos de lado (radianos); 0 = reto, de frente
 
 const secao = document.getElementById('inicio');
@@ -66,6 +67,7 @@ function iniciar() {
   let texN = null, W = 0, H = 0, dpr = 1;
   const foto = new Image(); let fotoPronta = false;
   foto.onload = () => { fotoPronta = true; chaveCena = ''; };
+  foto.crossOrigin = 'anonymous';
   foto.src = FOTO_FINAL;
 
   function desenharTexto(ctx, w, h, linhas, escala) {
@@ -85,7 +87,7 @@ function iniciar() {
     const r = Math.max(w / foto.width, h / foto.height), fw = foto.width * r, fh = foto.height * r;
     ctx.drawImage(foto, (w - fw) / 2, (h - fh) / 2, fw, fh);
     // véu escuro leve para a frase branca continuar legível sobre a foto
-    const a = ctx.globalAlpha; ctx.globalAlpha = a * .3; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h); ctx.globalAlpha = a;
+    const a = ctx.globalAlpha; ctx.globalAlpha = a * .12; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h); ctx.globalAlpha = a;
   }
   function pintar(ctx, camadas) {
     const w = ctx.canvas.width, h = ctx.canvas.height;
@@ -329,17 +331,20 @@ function iniciar() {
       noFundo = [{ linhas: FRASE, alfa: 1 - hp, escala: (.84 + .16 * intro) * (1 + .32 * aprox + .25 * hp) }, { linhas: [MODELOS[0].nome], alfa: hp, escala: .85 + .15 * hp }];
       nasLentes = noFundo;
     } else if (mergulho > 0) {
-      // a lente cresce até a tela inteira: a frase se abre e some, fica só a paisagem nítida
-      noFundo = [{ foto: true, alfa: 1 }, { linhas: FRASE_FINAL, alfa: 1 - faixa(mergulho, .05, .4), escala: 1 + .7 * mg }];
-      nasLentes = noFundo;
+      // a lente cresce até a tela inteira: do lado de fora a frase se abre e some; dentro, a paisagem nítida
+      noFundo = [{ linhas: FRASE_FINAL, alfa: 1 - faixa(mergulho, .05, .4), escala: 1 + .7 * mg }];
+      nasLentes = [{ foto: true, alfa: 1 }];
     } else {
-      // cada modelo mostra o seu nome ao fundo; o último traz a paisagem e a frase de venda
-      const cenaModelo = (i, alfa, escala) => i < 3
-        ? [{ linhas: [MODELOS[i].nome], alfa, escala }]
-        : [{ foto: true, alfa }, { linhas: FRASE_FINAL, alfa, escala }];
-      noFundo = cenaModelo(m, 1 - troca, 1 + .25 * troca);
-      if (m < 3) noFundo.push(...cenaModelo(m + 1, troca, .85 + .15 * troca));
-      nasLentes = noFundo;
+      // cada modelo mostra o seu nome ao fundo (desfocado fora, nítido nas lentes);
+      // no último, a frase de venda fica do lado de fora e a paisagem aparece dentro das lentes
+      const foraModelo = (i, alfa, escala) => [{ linhas: i < 3 ? [MODELOS[i].nome] : FRASE_FINAL, alfa, escala }];
+      const lenteModelo = (i, alfa, escala) => i < 3 ? foraModelo(i, alfa, escala) : [{ foto: true, alfa }];
+      noFundo = foraModelo(m, 1 - troca, 1 + .25 * troca);
+      nasLentes = lenteModelo(m, 1 - troca, 1 + .25 * troca);
+      if (m < 3) {
+        noFundo.push(...foraModelo(m + 1, troca, .85 + .15 * troca));
+        nasLentes.push(...lenteModelo(m + 1, troca, .85 + .15 * troca));
+      }
     }
     atualizarCena(noFundo, nasLentes);
 
