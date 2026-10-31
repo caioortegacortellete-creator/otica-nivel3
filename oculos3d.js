@@ -18,8 +18,10 @@ const MODELOS = [
   { nome: 'Redonda', cor: 'Titânio preto', detalhe: 'Aro fino, leve como nada', medida: '49□21', forma: 'redonda', material: 'titanio' }
 ];
 const FRASE = ['Tudo', 'em', 'foco'];
+// no último modelo, a paisagem entra ao fundo e esta frase (de venda) ocupa o lugar do nome do modelo
+const FRASE_FINAL = ['Enxergue', 'cada detalhe.'];
 const FOTO_FINAL = 'paisagem.jpg';
-const ANGULO = -.42;  // quanto o óculos fica virado de lado (radianos), para as hastes aparecerem
+const ANGULO = 0;     // giro do óculos de lado (radianos); 0 = reto, de frente
 
 const secao = document.getElementById('inicio');
 const palco = secao.querySelector('.exp-palco');
@@ -82,6 +84,8 @@ function iniciar() {
     if (!fotoPronta) return;
     const r = Math.max(w / foto.width, h / foto.height), fw = foto.width * r, fh = foto.height * r;
     ctx.drawImage(foto, (w - fw) / 2, (h - fh) / 2, fw, fh);
+    // véu escuro leve para a frase branca continuar legível sobre a foto
+    const a = ctx.globalAlpha; ctx.globalAlpha = a * .3; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h); ctx.globalAlpha = a;
   }
   function pintar(ctx, camadas) {
     const w = ctx.canvas.width, h = ctx.canvas.height;
@@ -325,13 +329,16 @@ function iniciar() {
       noFundo = [{ linhas: FRASE, alfa: 1 - hp, escala: (.84 + .16 * intro) * (1 + .32 * aprox + .25 * hp) }, { linhas: [MODELOS[0].nome], alfa: hp, escala: .85 + .15 * hp }];
       nasLentes = noFundo;
     } else if (mergulho > 0) {
-      const ff = faixa(mergulho, .1, .4);
-      const palavra = { linhas: [MODELOS[3].nome], alfa: 1 - faixa(mergulho, .05, .45), escala: 1 + .9 * mg };
-      noFundo = [palavra];
-      nasLentes = [{ ...palavra, alfa: 1 - ff }, { foto: true, alfa: ff }];
+      // a lente cresce até a tela inteira: a frase se abre e some, fica só a paisagem nítida
+      noFundo = [{ foto: true, alfa: 1 }, { linhas: FRASE_FINAL, alfa: 1 - faixa(mergulho, .05, .4), escala: 1 + .7 * mg }];
+      nasLentes = noFundo;
     } else {
-      noFundo = [{ linhas: [MODELOS[m].nome], alfa: 1 - troca, escala: 1 + .25 * troca }];
-      if (m < 3) noFundo.push({ linhas: [MODELOS[m + 1].nome], alfa: troca, escala: .85 + .15 * troca });
+      // cada modelo mostra o seu nome ao fundo; o último traz a paisagem e a frase de venda
+      const cenaModelo = (i, alfa, escala) => i < 3
+        ? [{ linhas: [MODELOS[i].nome], alfa, escala }]
+        : [{ foto: true, alfa }, { linhas: FRASE_FINAL, alfa, escala }];
+      noFundo = cenaModelo(m, 1 - troca, 1 + .25 * troca);
+      if (m < 3) noFundo.push(...cenaModelo(m + 1, troca, .85 + .15 * troca));
       nasLentes = noFundo;
     }
     atualizarCena(noFundo, nasLentes);
@@ -339,12 +346,12 @@ function iniciar() {
     // qual óculos aparece e como ele está posicionado (de lado, com as hastes à mostra)
     oculos.forEach((o, i) => { o.g.visible = i === atual; });
     const oc = oculos[atual], o = oc.g;
-    rx += ((reduzir ? 0 : my) * .14 - rx) * .06; ry += ((reduzir ? 0 : mx) * .28 - ry) * .06;
+    rx += ((reduzir ? 0 : my) * .04 - rx) * .06; ry += ((reduzir ? 0 : mx) * .07 - ry) * .06;
     const giroTroca = troca < .5 ? troca * Math.PI : (troca - 1) * Math.PI;
     const flutua = reduzir ? 0 : Math.sin(t / 1100) * .04;
     const lado = ANGULO * (1 - .45 * aprox);
     let s = base * (1 + .5 * aprox) * (.6 + .4 * intro);
-    let x = .25 * base * (1 - aprox), y = flutua * (1 - mg) - .05 * base;
+    let x = 0, y = flutua * (1 - mg);
     if (mergulho > 0) {
       const meiaDiag = Math.hypot(visW, visH) / 2;
       const alvo = meiaDiag / (.45 * base) * 1.3;
@@ -354,7 +361,7 @@ function iniciar() {
     }
     o.scale.setScalar(s);
     o.position.set(x, y, 0);
-    o.rotation.set((.1 + rx) * (1 - mg), (lado + ry + giroTroca) * (1 - mg) - (1 - intro) * 2.8, (reduzir ? 0 : Math.sin(t / 1700) * .02) * (1 - mg));
+    o.rotation.set(rx * (1 - mg), (lado + ry + giroTroca) * (1 - mg) - (1 - intro) * 2.8, (reduzir ? 0 : Math.sin(t / 1700) * .02) * (1 - mg));
 
     // centro de cada lente na tela, para a ampliação partir dele
     const bw = W * dpr, bh = H * dpr;
