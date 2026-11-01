@@ -247,48 +247,64 @@
   .membro .cargo { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--rubi); margin: 4px 0 10px; }
   .membro p { color: var(--claro-suave); font-size: 15px; }
 
-  /* ---------- Depoimentos: painel de nota + citação animada com rostos e barra de tempo ---------- */
+  /* ---------- Depoimentos: as avaliações passam desfocadas por trás de um óculos gigante e entram em foco nas lentes.
+     O desfoque é sombra de texto (desenhada uma vez só), não filtro: desliza leve também no celular ---------- */
+  .lv-palco { --L: clamp(380px, 30vw, 500px); --P: 74px; --H: max(350px, calc(var(--L) * .74)); --B: 13px; --passo: calc(var(--L) + var(--P)); --miolo: calc(var(--L) - 112px); position: relative; display: flex; justify-content: center; align-items: center; padding: 30px 0 64px; overflow: hidden; touch-action: pan-y; user-select: none; -webkit-user-select: none; cursor: grab; }
+  .lv-palco.arrastando { cursor: grabbing; }
+  .lv-esteira { position: absolute; left: 0; top: 50%; display: flex; width: max-content; transform: translate3d(0, -50%, 0); will-change: transform; }
+  .lv-cartao { flex: 0 0 var(--passo); height: var(--H); display: flex; flex-direction: column; justify-content: center; align-items: center; }
+  .lv-cartao > div { width: var(--miolo); }
+  .lv-cartao .estrelas { display: block; font-size: 15px; margin-bottom: 12px; }
+  .lv-cartao .estrelas i { display: inline-block; font-style: normal; opacity: .22; transform: scale(.7); transition: opacity .4s, transform .5s cubic-bezier(.3, 1.8, .5, 1); transition-delay: calc(var(--n) * 90ms); }
+  .lv-cartao.em-foco .estrelas i { opacity: 1; transform: none; }
+  .lv-cartao blockquote { font-family: var(--serif); font-size: clamp(18px, 1.5vw, 22px); line-height: 1.36; color: var(--grafite); margin-bottom: 16px; }
+  .lv-cartao mark { color: inherit; background: linear-gradient(var(--rubi), var(--rubi)) 0 100% / 0 2px no-repeat; transition: background-size .9s var(--suave) .35s; }
+  .lv-cartao.em-foco mark { background-size: 100% 2px; }
+  .lv-cartao b { display: block; font-size: 15px; font-weight: 700; color: var(--grafite); }
+  .lv-cartao small { display: block; font-size: 12.5px; color: var(--texto-suave); }
+  /* o que está fora das lentes: menor, sem nitidez */
+  .lv-fundo { position: absolute; inset: 0; pointer-events: none; }
+  .lv-fundo .lv-cartao > div { transform: scale(.9); }
+  .lv-fundo blockquote, .lv-fundo b, .lv-fundo small, .lv-fundo .estrelas { color: transparent; text-shadow: 0 0 7px rgba(20, 17, 19, .42); }
+  .lv-fundo .estrelas { text-shadow: 0 0 6px rgba(224, 49, 63, .5); }
+  .lv-fundo .estrelas i { opacity: 1; transform: none; transition: none; }
+  .lv-fundo mark { background: none; }
+  .lv-oculos { position: relative; display: flex; gap: var(--P); will-change: transform; }
+  .lv-lente { position: relative; width: var(--L); height: var(--H); border: var(--B) solid var(--rubi-escuro); border-radius: 92px 92px 132px 132px; background: #fffdfb; overflow: hidden; box-shadow: 0 26px 50px -24px rgba(90, 10, 20, .55), 0 0 0 1px rgba(255, 255, 255, .25) inset; }
+  .lv-brilho { position: absolute; inset: -20% -40%; background: linear-gradient(105deg, transparent 42%, rgba(224, 49, 63, .1) 49%, rgba(255, 255, 255, .75) 50%, rgba(224, 49, 63, .1) 51%, transparent 58%); pointer-events: none; transform: translate3d(-130%, 0, 0); }
+  .lv-ponte { position: absolute; left: var(--L); top: 19%; width: var(--P); height: 30px; overflow: visible; fill: none; stroke: var(--rubi-escuro); stroke-width: var(--B); }
+  .lv-ponteira { position: absolute; top: 15%; width: 40px; height: 20px; background: var(--rubi-escuro); }
+  .lv-ponteira.esq { right: 100%; border-radius: 10px 0 0 10px; margin-right: -4px; }
+  .lv-ponteira.dir { left: 100%; border-radius: 0 10px 10px 0; margin-left: -4px; }
+  .lv-rodape { display: flex; justify-content: space-between; align-items: center; gap: 28px; margin-top: 34px; }
+  .lv-nota { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .lv-nota strong { font-family: var(--nome); font-size: 54px; font-weight: 300; line-height: 1; color: var(--grafite); }
+  .lv-nota .estrelas { display: block; font-size: 14px; }
+  .lv-nota small { display: block; font-size: 13px; color: var(--texto-suave); }
+  .lv-nota .link-seta { color: var(--rubi-escuro); margin-left: 10px; }
+  .lv-pontos { display: flex; }
+  .lv-pontos button { width: 26px; height: 32px; display: flex; align-items: center; justify-content: center; }
+  .lv-pontos button::before { content: ""; width: 12px; height: 12px; border: 2px solid var(--rubi-escuro); border-radius: 50%; transition: background .4s, transform .4s var(--suave); }
+  .lv-pontos button.ativo::before { background: var(--rubi-escuro); transform: scale(1.2); }
+  .lv-setas { display: flex; gap: 10px; }
+  .lv-setas button { width: 48px; height: 48px; border: 1px solid var(--linha); border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: background .2s, border-color .2s; }
+  .lv-setas button:hover { background: var(--grafite); border-color: var(--grafite); }
+  .lv-setas svg { width: 18px; height: 18px; fill: none; stroke: var(--grafite); stroke-width: 1.8; }
+  .lv-setas button:hover svg { stroke: var(--claro); }
+  .so-leitor { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  @media (max-width: 920px) {
+    .lv-palco { --L: 80vw; --P: 34px; --H: 390px; --B: 11px; --miolo: calc(var(--L) - 74px); }
+    .lv-lente { border-radius: 70px 70px 104px 104px; }
+    .lv-lente.dir, .lv-ponteira.dir { display: none; }
+    .lv-cartao blockquote { font-size: 18px; }
+    .lv-rodape { flex-wrap: wrap; justify-content: center; gap: 18px; }
+    .lv-nota { justify-content: center; }
+    .lv-nota .link-seta { margin-left: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .lv-cartao .estrelas i, .lv-cartao mark { transition: none; }
+  }
   .estrelas { color: #e0313f; letter-spacing: 3px; }
-  .depo-grade { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.6fr); gap: 32px; align-items: stretch; }
-  .depo-nota { background: var(--grafite); color: var(--claro); border-radius: 16px; padding: 40px 36px; display: flex; flex-direction: column; position: relative; overflow: hidden; }
-  .depo-nota::before { content: ""; position: absolute; top: -30%; right: -30%; width: 80%; height: 80%; background: radial-gradient(closest-side, rgba(224,49,63,.25), transparent); }
-  .depo-nota strong { position: relative; font-family: var(--nome); font-size: 104px; font-weight: 300; line-height: .85; color: var(--claro); }
-  .depo-nota .estrelas { position: relative; font-size: 22px; margin: 10px 0 8px; }
-  .depo-nota > p { position: relative; color: var(--claro-suave); font-size: 15px; margin-bottom: 28px; }
-  .depo-nota > p b { color: var(--claro); font-weight: 500; }
-  .barras { position: relative; list-style: none; display: grid; gap: 10px; margin-bottom: auto; padding-bottom: 28px; }
-  .barras li { display: grid; grid-template-columns: 26px 1fr 38px; align-items: center; gap: 10px; font-size: 13px; color: var(--claro-suave); }
-  .barras i { height: 4px; border-radius: 2px; background: rgba(247,240,231,.12); overflow: hidden; }
-  .barras i b { display: block; height: 100%; width: 0; background: var(--rubi); border-radius: 2px; transition: width 1.6s var(--suave); }
-  .depo-nota.visivel .barras i b { width: var(--v); }
-  .depo-nota .link-seta { position: relative; color: var(--rubi); }
-  .depo-palco { background: var(--creme-alt); border-radius: 16px; padding: 48px 52px 0; display: flex; flex-direction: column; position: relative; overflow: hidden; }
-  .depo-aspas { position: absolute; top: 10px; right: 40px; font-family: var(--nome); font-size: 260px; line-height: 1; color: rgba(163,97,31,.12); pointer-events: none; }
-  .depo-cartao { position: relative; flex: 1; transition: opacity .35s, transform .35s; }
-  .depo-cartao.trocando { opacity: 0; transform: translateY(-10px); }
-  .depo-cartao .estrelas { font-size: 16px; }
-  .depo-cartao blockquote { font-family: var(--serif); font-size: clamp(24px, 2.5vw, 34px); line-height: 1.38; color: var(--grafite); margin: 18px 0 30px; min-height: 4.2em; }
-  .depo-cartao blockquote span { display: inline-block; opacity: 0; transform: translateY(14px); filter: blur(4px); transition: opacity .6s var(--suave), transform .6s var(--suave), filter .6s var(--suave); transition-delay: calc(var(--n) * 28ms); }
-  .depo-cartao.mostrar blockquote span { opacity: 1; transform: none; filter: none; }
-  .depo-autor { display: flex; align-items: center; gap: 14px; }
-  .depo-autor .avatar { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--nome); font-size: 22px; font-weight: 600; color: var(--claro); }
-  .depo-autor b { display: block; font-size: 16px; }
-  .depo-autor span { font-size: 13px; color: var(--texto-suave); }
-  .depo-controles { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 28px 0; margin-top: 26px; border-top: 1px solid var(--linha); }
-  .depo-rostos { display: flex; }
-  .depo-rostos button { width: 44px; height: 44px; margin-left: -8px; border-radius: 50%; border: 3px solid var(--creme-alt); display: flex; align-items: center; justify-content: center; font-family: var(--nome); font-size: 17px; font-weight: 600; color: var(--claro); filter: grayscale(.6) brightness(.85); transition: transform .3s var(--suave), filter .3s, box-shadow .3s; }
-  .depo-rostos button:first-child { margin-left: 0; }
-  .depo-rostos button:hover { transform: translateY(-4px); filter: none; }
-  .depo-rostos button.ativo { filter: none; transform: translateY(-4px) scale(1.12); box-shadow: 0 0 0 2px var(--rubi-escuro); z-index: 1; }
-  .depo-setas { display: flex; gap: 10px; }
-  .depo-setas button { width: 48px; height: 48px; border: 1px solid var(--linha); border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: background .2s, border-color .2s; }
-  .depo-setas button:hover { background: var(--grafite); border-color: var(--grafite); }
-  .depo-setas svg { width: 18px; height: 18px; fill: none; stroke: var(--grafite); stroke-width: 1.8; }
-  .depo-setas button:hover svg { stroke: var(--claro); }
-  .depo-tempo { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--linha); }
-  .depo-tempo i { display: block; height: 100%; width: 0; background: var(--rubi-escuro); }
-  .depo-tempo i.correndo { animation: tempo 7s linear forwards; }
-  @keyframes tempo { to { width: 100%; } }
 
   /* ---------- Contato e agendamento ---------- */
   .agendar .container { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); gap: 64px; align-items: start; }
@@ -452,13 +468,6 @@
     .canais { grid-template-columns: 1fr; }
 
     .equipe-grade { grid-template-columns: 1fr; gap: 44px; }
-    .depo-grade { grid-template-columns: minmax(0, 1fr); }
-    .depo-nota { padding: 32px 26px; }
-    .depo-nota strong { font-size: 80px; }
-    .depo-palco { padding: 34px 22px 0; }
-    .depo-aspas { font-size: 180px; right: 10px; }
-    .depo-cartao blockquote { min-height: 6.4em; }
-    .depo-rostos button { width: 36px; height: 36px; font-size: 14px; }
     .agenda .linha-campos { grid-template-columns: 1fr; }
     .artigos-grade { grid-template-columns: 1fr; gap: 44px; }
   }
@@ -472,7 +481,6 @@
     .voo-destino, .voo-oculos, .fio, .sobre-foto .moldura img.loja-limpa, .orbe { display: none; }
     .quiz { backdrop-filter: none; -webkit-backdrop-filter: none; }
     .sobre-foto .selo-giro { animation: none; }
-    .depo-cartao blockquote span { filter: none; transform: none; opacity: 1; transition: none; }
     .tv-linha b { filter: none; }
     .placa-logo svg { animation: none; filter: drop-shadow(0 0 6px rgba(224,49,63,.9)); }
     .res-icone::after, .status i::after { animation: none; }
@@ -607,38 +615,30 @@
           <p class="rotulo revelar">Depoimentos</p>
           <h2 class="revelar">Quem já <em>saiu enxergando.</em></h2>
         </div>
-        <p class="revelar">Avaliações de clientes no Google. Cada óculos é único, mas o cuidado no atendimento é sempre o mesmo.</p>
+        <p class="revelar">Avaliações de clientes no Google. Arraste para o lado e veja cada uma entrar em foco.</p>
       </div>
-      <div class="depo-grade">
-        <aside class="depo-nota revelar">
-          <strong>4,9</strong>
-          <span class="estrelas">★★★★★</span>
-          <p>Média de <b>212 avaliações</b> no Google</p>
-          <ul class="barras">
-            <li>5★<i><b style="--v:92%"></b></i>92%</li>
-            <li>4★<i><b style="--v:6%"></b></i>6%</li>
-            <li>3★<i><b style="--v:2%"></b></i>2%</li>
-            <li>2★<i><b style="--v:0%"></b></i>0%</li>
-            <li>1★<i><b style="--v:0%"></b></i>0%</li>
-          </ul>
-          <a class="link-seta" href="#" target="_blank" rel="noopener">Ver avaliações no Google <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
-        </aside>
-        <div class="depo-palco revelar" style="--atraso:.12s">
-          <span class="depo-aspas" aria-hidden="true">“</span>
-          <article class="depo-cartao" id="depo-cartao" aria-live="polite">
-            <span class="estrelas">★★★★★</span>
-            <blockquote id="depo-texto"></blockquote>
-            <div class="depo-autor"><span class="avatar" id="depo-avatar"></span><div><b id="depo-nome"></b><span id="depo-info"></span></div></div>
-          </article>
-          <div class="depo-controles">
-            <div class="depo-rostos" id="depo-rostos"></div>
-            <div class="depo-setas">
-              <button id="depo-ant" aria-label="Depoimento anterior"><svg viewBox="0 0 24 24" style="transform:scaleX(-1)"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
-              <button id="depo-prox" aria-label="Próximo depoimento"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
-            </div>
-          </div>
-          <div class="depo-tempo"><i id="depo-tempo"></i></div>
-        </div>
+    </div>
+    <div class="lv-palco revelar" id="lv-palco" aria-hidden="true">
+      <div class="lv-fundo"><div class="lv-esteira"></div></div>
+      <div class="lv-oculos" id="lv-oculos">
+        <i class="lv-ponteira esq"></i>
+        <div class="lv-lente"><div class="lv-esteira"></div><i class="lv-brilho"></i></div>
+        <svg class="lv-ponte" viewBox="0 0 74 30" preserveAspectRatio="none"><path d="M-4 24 C 18 2, 56 2, 78 24" vector-effect="non-scaling-stroke"/></svg>
+        <div class="lv-lente dir"><div class="lv-esteira"></div><i class="lv-brilho"></i></div>
+        <i class="lv-ponteira dir"></i>
+      </div>
+    </div>
+    <ul class="so-leitor" id="lv-leitura"></ul>
+    <div class="container lv-rodape revelar">
+      <div class="lv-nota">
+        <strong>4,9</strong>
+        <div><span class="estrelas">★★★★★</span><small>Média de 212 avaliações no Google</small></div>
+        <a class="link-seta" href="#" target="_blank" rel="noopener">Ver no Google <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      </div>
+      <div class="lv-pontos" id="lv-pontos"></div>
+      <div class="lv-setas">
+        <button id="lv-ant" aria-label="Avaliação anterior"><svg viewBox="0 0 24 24" style="transform:scaleX(-1)"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        <button id="lv-prox" aria-label="Próxima avaliação"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
       </div>
     </div>
   </section>
@@ -855,41 +855,131 @@
   }
   mostrarPergunta(true);
 
-  // ---------- Depoimentos ----------
+  // ---------- Depoimentos: esteira de avaliações atrás do óculos ----------
+  // Entre [[ ]] fica o trecho que ganha o sublinhado vermelho quando a avaliação entra em foco
   const DEPOIMENTOS = [
-    ['Márcia T.', 'Lentes multifocais', 'há 2 semanas', 'Tinha desistido da multifocal em outra ótica. Aqui refizeram a medição com calma e me adaptei em poucos dias.', '#2a2224'],
-    ['Gustavo P.', 'Óculos de grau', 'há 3 semanas', 'Mandei a receita pelo WhatsApp de manhã e à tarde já estava escolhendo a armação. Atendimento muito atencioso.', '#a3611f'],
-    ['Aline R.', 'Óculos infantis', 'há 1 mês', 'Meu filho escolheu a cor e a armação aguenta tudo. Ainda ajustaram na hora quando entortou.', '#6e1520'],
-    ['Roberto C.', 'Óculos de sol', 'há 2 meses', 'Fiz meus óculos de sol com grau e a diferença dirigindo na estrada é enorme. Recomendo demais.', '#b4553a'],
-    ['Larissa M.', 'Lentes de contato', 'há 2 meses', 'Primeira vez usando lentes de contato e me ensinaram tudo sem pressa. Voltei com dúvidas e sempre fui bem atendida.', '#5c1420'],
-    ['Paulo S.', 'Ajustes e consertos', 'há 3 meses', 'Levei um óculos que comprei em outro lugar e estava machucando o nariz. Ajustaram na hora, com toda a paciência.', '#7a2a35']
+    ['Márcia T.', 'Lentes multifocais', 'há 2 semanas', 'Tinha desistido da multifocal em outra ótica. Aqui refizeram a medição com calma e [[me adaptei em poucos dias.]]'],
+    ['Gustavo P.', 'Óculos de grau', 'há 3 semanas', 'Mandei a receita pelo WhatsApp de manhã e [[à tarde já estava escolhendo a armação.]] Atendimento muito atencioso.'],
+    ['Aline R.', 'Óculos infantis', 'há 1 mês', 'Meu filho escolheu a cor e [[a armação aguenta tudo.]] Ainda ajustaram na hora quando entortou.'],
+    ['Roberto C.', 'Óculos de sol', 'há 2 meses', 'Fiz meus óculos de sol com grau e [[a diferença dirigindo na estrada é enorme.]] Recomendo demais.'],
+    ['Larissa M.', 'Lentes de contato', 'há 2 meses', 'Primeira vez usando lentes de contato e [[me ensinaram tudo sem pressa.]] Voltei com dúvidas e sempre fui bem atendida.'],
+    ['Paulo S.', 'Ajustes e consertos', 'há 3 meses', 'Levei um óculos de outro lugar que machucava o nariz. [[Ajustaram na hora, com toda a paciência.]]']
   ];
-  const depoCartao = document.getElementById('depo-cartao'), depoTempo = document.getElementById('depo-tempo'), rostos = document.getElementById('depo-rostos');
-  rostos.innerHTML = DEPOIMENTOS.map((d, i) => `<button style="background:${d[4]}" aria-label="Depoimento de ${d[0]}" data-i="${i}">${d[0][0]}</button>`).join('');
-  let depoAtual = -1, depoTimer;
-  function irDepo(i, imediato) {
-    i = (i + DEPOIMENTOS.length) % DEPOIMENTOS.length;
-    if (i === depoAtual) return;
-    depoAtual = i;
-    const [nome, prod, quando, texto, cor] = DEPOIMENTOS[i];
-    const aplicar = () => {
-      document.getElementById('depo-texto').innerHTML = texto.split(' ').map((p, n) => `<span style="--n:${n}">${p}</span>`).join(' ');
-      const av = document.getElementById('depo-avatar'); av.textContent = nome[0]; av.style.background = cor;
-      document.getElementById('depo-nome').textContent = nome;
-      document.getElementById('depo-info').textContent = `${prod} · ${quando} · Google`;
-      depoCartao.classList.remove('trocando', 'mostrar'); void depoCartao.offsetWidth;
-      requestAnimationFrame(() => depoCartao.classList.add('mostrar'));
+  (function () {
+    const palco = document.getElementById('lv-palco'), oculos = document.getElementById('lv-oculos');
+    const fundoE = palco.querySelector('.lv-fundo .lv-esteira'), lentes = [...oculos.querySelectorAll('.lv-lente')];
+    const pontos = document.getElementById('lv-pontos'), N = DEPOIMENTOS.length, ESPERA = 5500;
+    const cartao = ([nome, prod, quando, texto]) => `<article class="lv-cartao"><div><span class="estrelas">${[...'★★★★★'].map((e, n) => `<i style="--n:${n}">${e}</i>`).join('')}</span><blockquote>${texto.replace('[[', '<mark>').replace(']]', '</mark>')}</blockquote><b>${nome}</b><small>${prod} · ${quando} · Google</small></div></article>`;
+    const fita = Array(3).fill(DEPOIMENTOS.map(cartao).join('')).join('');   // 3 cópias: a posição dá a volta sem emenda
+    [fundoE, ...lentes.map(l => l.querySelector('.lv-esteira'))].forEach(e => { e.innerHTML = fita; });
+    document.getElementById('lv-leitura').innerHTML = DEPOIMENTOS.map(d => `<li>${d[3].replace(/\[\[|\]\]/g, '')} ${d[0]}, ${d[1]}.</li>`).join('');
+    pontos.innerHTML = DEPOIMENTOS.map((d, i) => `<button data-i="${i}" aria-label="Ver avaliação de ${d[0]}"></button>`).join('');
+
+    const lim = (v, a, b) => Math.max(a, Math.min(b, v));
+    const resto = v => ((v % N) + N) % N;
+    let passo = 0, centro = 0, duasLentes = true;
+    let pos = reduzir ? 0 : -3, alvo = 0, vel = 0, quadro = 0, antes = 0, timer = 0;
+    let naTela = false, comecou = reduzir, mouseEm = false, arrasto = null, focado = false;
+
+    function medir() {
+      passo = fundoE.firstElementChild.offsetWidth;
+      centro = oculos.offsetLeft + lentes[0].offsetLeft + lentes[0].offsetWidth / 2;
+      duasLentes = lentes[1].offsetWidth > 0;
+      marcarPontos();
+      desenhar();
+    }
+    function desenhar() {
+      const m = resto(pos), x = -(m + N + .5) * passo;
+      // o óculos fica um pouco para trás no embalo; a fita nas lentes desconta, para seguir alinhada com a de fora
+      const dx = lim(vel * 13, -16, 16);
+      fundoE.style.transform = `translate3d(${centro + x}px, -50%, 0)`;
+      oculos.style.transform = `translate3d(${dx}px, 0, 0)`;
+      const brilho = `translate3d(${(m % 1) * 260 - 130}%, 0, 0)`;
+      lentes.forEach((l, i) => {
+        l.firstElementChild.style.transform = `translate3d(${l.clientWidth / 2 + x - i * passo - dx}px, -50%, 0)`;
+        l.lastElementChild.style.transform = brilho;
+      });
+    }
+    function marcarPontos() {
+      const a = resto(Math.round(alvo));
+      [...pontos.children].forEach((b, i) => b.classList.toggle('ativo', i === a || (duasLentes && i === resto(a + 1))));
+    }
+    function focar() {
+      const a = resto(Math.round(alvo));
+      focado = true;
+      lentes.forEach((l, i) => { const c = l.firstElementChild.children[a + N + i]; if (c) c.classList.add('em-foco'); });
+    }
+    function tirarFoco() { focado = false; oculos.querySelectorAll('.em-foco').forEach(c => c.classList.remove('em-foco')); }
+    function quadroMola(agora) {
+      const dt = Math.min(agora - antes, 32) / 1000; antes = agora;
+      vel += ((alvo - pos) * 17 - vel * 6.8) * dt;   // mola lenta, com uma leve passada do ponto
+      pos += vel * dt;
+      if (!focado && Math.abs(alvo - pos) < .04) focar();   // as estrelas acendem assim que a avaliação chega na lente
+      if (Math.abs(alvo - pos) < .002 && Math.abs(vel) < .01) {
+        pos = alvo; vel = 0; quadro = 0; desenhar(); if (!focado) focar(); agendar();
+        return;
+      }
+      desenhar();
+      quadro = requestAnimationFrame(quadroMola);
+    }
+    function mover(novo) {
+      alvo = novo; tirarFoco(); marcarPontos(); clearTimeout(timer);
+      if (reduzir) { pos = alvo; desenhar(); focar(); agendar(); return; }
+      if (!quadro) { antes = performance.now(); quadro = requestAnimationFrame(quadroMola); }
+    }
+    function agendar() {
+      clearTimeout(timer);
+      if (!reduzir && comecou && naTela && !mouseEm && !arrasto && !document.hidden) timer = setTimeout(() => mover(Math.round(alvo) + 1), ESPERA);
+    }
+
+    pontos.addEventListener('click', e => {
+      const b = e.target.closest('button'); if (!b) return;
+      const atual = resto(Math.round(alvo)); let d = +b.dataset.i - atual;
+      if (d > N / 2) d -= N; if (d < -N / 2) d += N;
+      mover(Math.round(alvo) + d);
+    });
+    document.getElementById('lv-ant').addEventListener('click', () => mover(Math.round(alvo) - 1));
+    document.getElementById('lv-prox').addEventListener('click', () => mover(Math.round(alvo) + 1));
+    palco.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') { mouseEm = true; clearTimeout(timer); } });
+    palco.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') { mouseEm = false; agendar(); } });
+
+    // Arrastar com o mouse ou o dedo
+    palco.addEventListener('pointerdown', e => {
+      if (e.button) return;
+      arrasto = { x: e.clientX, pos, ultimoX: e.clientX, t: e.timeStamp, v: 0 };
+      cancelAnimationFrame(quadro); quadro = 0; vel = 0; clearTimeout(timer); tirarFoco();
+      palco.classList.add('arrastando'); palco.setPointerCapture(e.pointerId);
+    });
+    palco.addEventListener('pointermove', e => {
+      if (!arrasto) return;
+      const dt = Math.max(e.timeStamp - arrasto.t, 1);
+      arrasto.v = -(e.clientX - arrasto.ultimoX) / passo / dt * 1000;
+      arrasto.ultimoX = e.clientX; arrasto.t = e.timeStamp;
+      pos = alvo = arrasto.pos - (e.clientX - arrasto.x) / passo;
+      desenhar();
+    });
+    const soltar = () => {
+      if (!arrasto) return;
+      vel = lim(arrasto.v, -3, 3);
+      const destino = Math.round(pos + lim(vel * .22, -.8, .8));
+      arrasto = null; palco.classList.remove('arrastando');
+      mover(destino);
     };
-    [...rostos.children].forEach((b, j) => b.classList.toggle('ativo', j === i));
-    if (imediato || reduzir) aplicar(); else { depoCartao.classList.add('trocando'); setTimeout(aplicar, 350); }
-    clearTimeout(depoTimer);
-    depoTempo.classList.remove('correndo'); void depoTempo.offsetWidth;
-    if (!reduzir) { depoTempo.classList.add('correndo'); depoTimer = setTimeout(() => irDepo(depoAtual + 1), 7000); }
-  }
-  rostos.addEventListener('click', e => { const b = e.target.closest('button'); if (b) irDepo(+b.dataset.i); });
-  document.getElementById('depo-ant').addEventListener('click', () => irDepo(depoAtual - 1));
-  document.getElementById('depo-prox').addEventListener('click', () => irDepo(depoAtual + 1));
-  irDepo(0, true);
+    palco.addEventListener('pointerup', soltar);
+    palco.addEventListener('pointercancel', soltar);
+
+    addEventListener('resize', medir);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) clearTimeout(timer); else agendar(); });
+    new IntersectionObserver(([e]) => {
+      naTela = e.isIntersecting;
+      if (naTela && !comecou) { comecou = true; mover(0); }   // a fita chega rodando na primeira vez que aparece
+      else if (naTela) agendar();
+      else clearTimeout(timer);
+    }, { threshold: .35 }).observe(palco);
+    medir();
+    marcarPontos();
+    if (reduzir) focar();
+  })();
 
   // ---------- Contato: loja aberta agora? (seg a sex 9h–18h, sáb 9h–13h) ----------
   (function () {
