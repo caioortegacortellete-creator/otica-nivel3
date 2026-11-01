@@ -182,6 +182,13 @@ h2 em { font-family: var(--nome); font-style: italic; font-weight: 300; color: v
 .campo input:focus, .campo select:focus { outline: none; border-color: var(--rubi-escuro); }
 .campo.erro input, .campo.erro select { border-color: #c0392b; }
 
+/* Celular: tira os efeitos que mais pesam (desfoque por trás do menu, textura por cima das seções, pulso contínuo) */
+@media (max-width: 920px), (pointer: coarse) {
+  .topo.rolado { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(11,9,9,.97); }
+  .granulado::before { display: none; }
+  .whats-flutuante::before { animation: none; display: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .js .revelar, .js .entrada { opacity: 1; transform: none; }

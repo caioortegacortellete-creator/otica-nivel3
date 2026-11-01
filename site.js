@@ -94,8 +94,9 @@ document.querySelectorAll('[data-icone]').forEach(el => el.insertAdjacentHTML('a
 /* ---------- Rolagem suave (Lenis) ---------- */
 const semMovimento = matchMedia('(prefers-reduced-motion: reduce)').matches;
 let lenis = null;
-if (window.Lenis && !semMovimento) {
-  lenis = new Lenis({ duration: 1.2, easing: t => Math.min(1, 1.001 - Math.pow(2, -10 * t)), smoothWheel: true });
+// só com mouse: no celular a rolagem natural do aparelho já é suave e mais leve
+if (window.Lenis && !semMovimento && !matchMedia('(pointer: coarse)').matches) {
+  lenis = new Lenis({ lerp: .075, wheelMultiplier: .9, smoothWheel: true });
   (function quadro(t) { lenis.raf(t); requestAnimationFrame(quadro); })(performance.now());
 }
 const travar = sim => { document.body.classList.toggle('travado', sim); if (lenis) sim ? lenis.stop() : lenis.start(); };

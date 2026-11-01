@@ -1,5 +1,5 @@
 /* ============================================================
-   EXPERIÊNCIA 3D DO TOPO — um óculos 3D, visto de lado, que coloca a página em foco.
+   EXPERIÊNCIA 3D DO TOPO — um óculos 3D, reto e de frente, que coloca a página em foco.
    Fora das lentes, as palavras ficam desfocadas e crescem ao fundo; dentro delas, nítidas e ampliadas.
    Rolagem: o óculos se aproxima → troca de modelo (Clássica, Gatinho, Aviador, Redonda)
    → a lente da Redonda cresce até ocupar a tela, com a paisagem nítida só dentro dela.
@@ -7,6 +7,7 @@
    É um script comum (não "module") que carrega o three.js pelo importmap do index.html,
    para funcionar também quando o index.html é aberto direto da pasta (file://).
    Se o 3D falhar, a seção mostra o título nítido e o site segue normal.
+   No celular (LEVE) roda uma versão mais leve: menos resolução e detalhe, fundo sem blur, sem o óculos que voa.
    ============================================================ */
 (function () {
 let THREE, RoomEnvironment;
@@ -31,10 +32,14 @@ const glc = document.getElementById('exp-gl');
 const camadaHero = secao.querySelector('.exp-hero'), camadaModelo = secao.querySelector('.exp-modelo'), camadaFinal = secao.querySelector('.exp-final');
 const reduzir = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const temMouse = matchMedia('(hover: hover) and (pointer: fine)').matches;
+const LEVE = matchMedia('(max-width: 920px), (pointer: coarse)').matches;   // celular e tablet
+const BRILHO = LEVE ? 0 : 1;   // verniz (clearcoat) dos materiais: bonito, mas pesado no celular
 
 const limitar = (v, a, b) => Math.min(Math.max(v, a), b);
 const suave = t => t * t * (3 - 2 * t);
 const faixa = (p, a, b) => limitar((p - a) / (b - a), 0, 1);
+// distribui a rolagem entre as fases: topo (16%), troca de modelos (72%) e mergulho na lente (12%)
+const fase = q => q < .16 ? q / .16 * .26 : q < .88 ? .26 + (q - .16) / .72 * .54 : .8 + (q - .88) / .12 * .2;
 
 Promise.all([import('three'), import('three/addons/environments/RoomEnvironment.js')])
   .then(([tres, ambiente]) => { THREE = tres; RoomEnvironment = ambiente.RoomEnvironment; iniciar(); })
@@ -66,7 +71,7 @@ function iniciar() {
   const ctxF = fundo.getContext('2d'), ctxN = nitido.getContext('2d');
   let texN = null, W = 0, H = 0, dpr = 1;
   const foto = new Image(); let fotoPronta = false;
-  foto.onload = () => { fotoPronta = true; chaveCena = ''; };
+  foto.onload = () => { fotoPronta = true; chaveF = chaveN = ''; };
   foto.crossOrigin = 'anonymous';
   foto.src = FOTO_FINAL;
 
@@ -80,7 +85,11 @@ function iniciar() {
     ctx.font = `800 ${tam}px Manrope, system-ui, sans-serif`;
     const alt = tam * .84, y0 = h * .5 - (n - 1) * alt / 2;
     ctx.fillStyle = '#f5f1ec'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    linhas.forEach((l, i) => ctx.fillText(l, w / 2, y0 + i * alt + tam * .04));
+    // no fundo do celular, desenha só a sombra do texto (o texto fica fora da tela): é um desfoque suave e barato
+    const soSombra = LEVE && ctx === ctxF;
+    if (soSombra) { ctx.shadowColor = '#f5f1ec'; ctx.shadowBlur = w * .045; ctx.shadowOffsetX = w * 3; }
+    linhas.forEach((l, i) => ctx.fillText(l, w / 2 - (soSombra ? w * 3 : 0), y0 + i * alt + tam * .04));
+    if (soSombra) { ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; }
   }
   function desenharFoto(ctx, w, h) {
     if (!fotoPronta) return;
@@ -104,14 +113,15 @@ function iniciar() {
     });
     ctx.globalAlpha = 1;
   }
-  const chave = camadas => camadas.map(c => (c.foto ? 'F' : c.linhas.join(' ') + '@' + (c.escala || 1).toFixed(3)) + ':' + c.alfa.toFixed(3)).join(';');
-  let chaveCena = '';
+  // só redesenha o que mudou; no celular, em degraus maiores, porque enviar a tela nítida à placa de vídeo é o passo mais caro
+  const passoAlfa = LEVE ? 20 : 1000, passoEscala = LEVE ? 60 : 1000;
+  const chave = camadas => camadas.map(c => (c.foto ? 'F' : c.linhas.join(' ') + '@' + Math.round((c.escala || 1) * passoEscala)) + ':' + Math.round(c.alfa * passoAlfa)).join(';');
+  let chaveF = '', chaveN = '';
   function atualizarCena(noFundo, nasLentes) {
-    const k = W + 'x' + H + '|' + fotoPronta + '|' + chave(noFundo) + '||' + chave(nasLentes);
-    if (k === chaveCena) return;
-    chaveCena = k;
-    pintar(ctxF, noFundo); pintar(ctxN, nasLentes);
-    texN.needsUpdate = true;
+    const prefixo = W + 'x' + H + '|' + fotoPronta + '|';
+    const kF = prefixo + chave(noFundo), kN = prefixo + chave(nasLentes);
+    if (kF !== chaveF) { chaveF = kF; pintar(ctxF, noFundo); }
+    if (kN !== chaveN) { chaveN = kN; pintar(ctxN, nasLentes); texN.needsUpdate = true; }
   }
 
   /* ---------- Lentes: mostram a versão nítida, ampliada a partir do centro de cada lente, com reflexo de vidro ---------- */
@@ -141,7 +151,7 @@ function iniciar() {
   /* ---------- Desenho das lentes (lente direita, ~1 unidade de largura, sentido anti-horário, t = 0 aponta para fora) ---------- */
   const se = (v, n) => Math.sign(v) * Math.pow(Math.abs(v), 2 / n);
   function contornoLente(forma) {
-    const N = 180, pts = [];
+    const N = LEVE ? 90 : 180, pts = [];
     for (let i = 0; i < N; i++) {
       const t = i / N * Math.PI * 2, c = Math.cos(t), s = Math.sin(t);
       let x, y;
@@ -182,20 +192,20 @@ function iniciar() {
     return t;
   }
   const MATERIAIS = {
-    tartaruga: new THREE.MeshPhysicalMaterial({ map: texturaTartaruga(), roughness: .22, clearcoat: 1, clearcoatRoughness: .05 }),
-    rubi: new THREE.MeshPhysicalMaterial({ color: 0x7e0a18, roughness: .16, clearcoat: 1, clearcoatRoughness: .03 }),
+    tartaruga: new THREE.MeshPhysicalMaterial({ map: texturaTartaruga(), roughness: .22, clearcoat: BRILHO, clearcoatRoughness: .05 }),
+    rubi: new THREE.MeshPhysicalMaterial({ color: 0x7e0a18, roughness: .16, clearcoat: BRILHO, clearcoatRoughness: .03 }),
     dourado: new THREE.MeshStandardMaterial({ color: 0xd8b06a, metalness: 1, roughness: .2 }),
     titanio: new THREE.MeshStandardMaterial({ color: 0x1d1c20, metalness: .9, roughness: .32 }),
-    preto: new THREE.MeshPhysicalMaterial({ color: 0x0d0c0e, roughness: .16, clearcoat: 1, clearcoatRoughness: .04 })
+    preto: new THREE.MeshPhysicalMaterial({ color: 0x0d0c0e, roughness: .16, clearcoat: BRILHO, clearcoatRoughness: .04 })
   };
   const PRATA = new THREE.MeshStandardMaterial({ color: 0xd6d3d3, metalness: 1, roughness: .22 });
-  const PONTEIRA = new THREE.MeshPhysicalMaterial({ color: 0x141213, roughness: .3, clearcoat: .7 });
+  const PONTEIRA = new THREE.MeshPhysicalMaterial({ color: 0x141213, roughness: .3, clearcoat: .7 * BRILHO });
   const PLAQUETA = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: .1, transparent: true, opacity: .5 });
 
   /* ---------- Peças ---------- */
   function tubo(pontos, raio, mat, fechado) {
     const curva = new THREE.CatmullRomCurve3(pontos, !!fechado, 'centripetal');
-    return new THREE.Mesh(new THREE.TubeGeometry(curva, fechado ? 220 : 48, raio, 12, !!fechado), mat);
+    return new THREE.Mesh(new THREE.TubeGeometry(curva, (fechado ? 220 : 48) / (LEVE ? 2 : 1), raio, LEVE ? 8 : 12, !!fechado), mat);
   }
   // haste: sai da dobradiça para trás, abre um pouco para fora e faz a curva da orelha no fim
   function haste(x, y, lado, comp, raio, mat, ponta) {
@@ -238,7 +248,7 @@ function iniciar() {
       esq.slice(1).forEach(p => s.lineTo(p.x, p.y));
       s.quadraticCurveTo(0, rt.y - .015, rt.x, rt.y);                        // topo da ponte
       for (const lado of [-1, 1]) s.holes.push(new THREE.Path(espelhar(lente, lado, sep)));
-      const geo = new THREE.ExtrudeGeometry(s, { depth: .06, bevelEnabled: true, bevelThickness: .035, bevelSize: .028, bevelSegments: 6, steps: 1 });
+      const geo = new THREE.ExtrudeGeometry(s, { depth: .06, bevelEnabled: true, bevelThickness: .035, bevelSize: .028, bevelSegments: LEVE ? 3 : 6, steps: 1 });
       geo.translate(0, 0, -.03);
       g.add(new THREE.Mesh(geo, mat));
       // dobradiças e hastes
@@ -282,9 +292,11 @@ function iniciar() {
   /* ---------- Tamanhos ---------- */
   let visW = 1, visH = 1, base = 1;
   function medir() {
-    W = palco.clientWidth; H = palco.clientHeight; dpr = Math.min(devicePixelRatio || 1, 2);
+    W = palco.clientWidth; H = palco.clientHeight; dpr = Math.min(devicePixelRatio || 1, LEVE ? 1.25 : 2);
     const bw = Math.round(W * dpr), bh = Math.round(H * dpr);
-    for (const c of [fundo, nitido]) { c.width = bw; c.height = bh; }
+    nitido.width = bw; nitido.height = bh;
+    // no celular o fundo é desenhado bem pequeno e ampliado: fica desfocado sem usar o filtro de blur, que pesa muito
+    fundo.width = LEVE ? Math.round(W / 5) : bw; fundo.height = LEVE ? Math.round(H / 5) : bh;
     renderer.setPixelRatio(dpr); renderer.setSize(W, H, false);
     camera.aspect = W / H; camera.updateProjectionMatrix();
     visH = 2 * camera.position.z * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)); visW = visH * camera.aspect;
@@ -294,7 +306,7 @@ function iniciar() {
     texN.generateMipmaps = false; texN.minFilter = THREE.LinearFilter;
     lentes.forEach(m => { m.uniforms.uTex.value = texN; m.uniforms.uRes.value.set(bw, bh); });
     fundo.style.setProperty('--desfoque', Math.round(Math.min(W, H) * .018) + 'px');
-    chaveCena = '';
+    chaveF = chaveN = '';
   }
 
   /* ---------- Mouse ---------- */
@@ -302,7 +314,8 @@ function iniciar() {
   if (temMouse && !reduzir) addEventListener('mousemove', e => { mx = e.clientX / innerWidth * 2 - 1; my = e.clientY / innerHeight * 2 - 1; });
 
   /* ---------- Quadro a quadro ---------- */
-  let inicioIntro = null, modeloInfo = -1;
+  let inicioIntro = null, modeloInfo = -1, pSuave = null, pAnterior = null, tAnterior = 0;
+  const vivo = !LEVE && !reduzir;   // flutuação contínua só no computador; no celular só desenha quando algo muda
   const v = new THREE.Vector3();
   const infoNum = camadaModelo.querySelector('[data-num]'), infoCor = camadaModelo.querySelector('[data-cor]'),
     infoDetalhe = camadaModelo.querySelector('[data-detalhe]'), infoMedida = camadaModelo.querySelector('[data-medida]');
@@ -311,17 +324,24 @@ function iniciar() {
     requestAnimationFrame(quadro);
     const r = secao.getBoundingClientRect();
     if (r.bottom < 0 || r.top > innerHeight) return;
-    const p = limitar(-r.top / Math.max(secao.offsetHeight - innerHeight, 1), 0, 1);
+    const pReal = limitar(-r.top / Math.max(secao.offsetHeight - H, 1), 0, 1);
+    // o óculos segue a rolagem com um pequeno atraso: mesmo rolando rápido, dá para ver o giro da troca
+    pSuave = pSuave === null || reduzir ? pReal : pSuave + (pReal - pSuave) * (1 - Math.exp(-(t - tAnterior) / 220));
+    if (Math.abs(pReal - pSuave) < .00005) pSuave = pReal;
+    tAnterior = t;
+    const p = fase(pSuave);
 
     // entrada: o óculos chega girando depois da tela de abertura
     if (inicioIntro === null && document.body.classList.contains('pronto')) inicioIntro = t;
     const intro = reduzir ? 1 : inicioIntro === null ? 0 : suave(limitar((t - inicioIntro) / 1900, 0, 1));
+    if (!vivo && intro === 1 && pSuave === pAnterior && chaveN) return;   // nada mudou: não gasta bateria
+    pAnterior = pSuave;
 
     // fases da rolagem
     const aprox = suave(faixa(p, .05, .15)) * (1 - suave(faixa(p, .17, .25)));
     const fm = limitar((p - .26) / .135, 0, 3.999);
     const m = Math.floor(fm), f = fm - m;
-    const troca = m < 3 ? suave(faixa(f, .62, 1)) : 0;
+    const troca = m < 3 ? suave(faixa(f, .35, 1)) : 0;   // a troca (giro) ocupa 65% do trecho de cada modelo
     const mergulho = faixa(p, .8, .97), mg = suave(mergulho);
     const atual = p < .26 ? 0 : (troca > .5 ? m + 1 : m);
 
@@ -354,7 +374,7 @@ function iniciar() {
     const oc = oculos[atual], o = oc.g;
     rx += ((reduzir ? 0 : my) * .04 - rx) * .06; ry += ((reduzir ? 0 : mx) * .07 - ry) * .06;
     const giroTroca = troca < .5 ? troca * Math.PI : (troca - 1) * Math.PI;
-    const flutua = reduzir ? 0 : Math.sin(t / 1100) * .04;
+    const flutua = vivo ? Math.sin(t / 1100) * .04 : 0;
     const lado = ANGULO * (1 - .45 * aprox);
     let s = base * (1 + .5 * aprox) * (.6 + .4 * intro);
     let x = 0, y = flutua * (1 - mg);
@@ -367,7 +387,7 @@ function iniciar() {
     }
     o.scale.setScalar(s);
     o.position.set(x, y, 0);
-    o.rotation.set(rx * (1 - mg), (lado + ry + giroTroca) * (1 - mg) - (1 - intro) * 2.8, (reduzir ? 0 : Math.sin(t / 1700) * .02) * (1 - mg));
+    o.rotation.set(rx * (1 - mg), (lado + ry + giroTroca) * (1 - mg) - (1 - intro) * 2.8, (vivo ? Math.sin(t / 1700) * .02 : 0) * (1 - mg));
 
     // centro de cada lente na tela, para a ampliação partir dele
     const bw = W * dpr, bh = H * dpr;
@@ -394,7 +414,7 @@ function iniciar() {
      Começa em cima do óculos de baixo da foto ([data-voo-origem]) e termina em [data-voo-destino].
      Tem a sua própria camada (canvas fixo, sem cliques) e só desenha quando a origem ou o destino estão na tela. */
   const origemVoo = document.querySelector('[data-voo-origem]'), destinoVoo = document.querySelector('[data-voo-destino]');
-  if (origemVoo && destinoVoo) {
+  if (!LEVE && origemVoo && destinoVoo) {
     try { iniciarVoo(); } catch (e) { console.warn('Voo do óculos desativado:', e); }
   }
   function iniciarVoo() {
@@ -450,7 +470,12 @@ function iniciar() {
   }
 
   medir();
-  addEventListener('resize', () => { medir(); });
+  // no celular, a barra de endereço que some ao rolar dispara "resize": só refaz se o tamanho do palco mudou mesmo
+  addEventListener('resize', () => { if (palco.clientWidth !== W || palco.clientHeight !== H) medir(); });
+  // prepara os 4 modelos de uma vez, para a primeira troca não dar um tranco
+  oculos.forEach(o => { o.g.visible = true; });
+  renderer.compile(cena, camera);
+  oculos.forEach(o => { o.g.visible = false; });
   const comecar = () => { window.oculos3dOk = true; secao.classList.add('com-3d'); requestAnimationFrame(quadro); };
   (document.fonts && document.fonts.load ? document.fonts.load('800 120px Manrope') : Promise.resolve()).then(comecar, comecar);
 }

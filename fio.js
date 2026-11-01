@@ -19,6 +19,7 @@
 
   function iniciar() {
     if (!document.querySelector('[data-voo-destino]') || !document.getElementById('agendar')) return;
+    if (matchMedia('(max-width: 920px), (pointer: coarse)').matches) return;   // no celular o fio fica de fora, para o site ficar leve
     svg = document.createElementNS(NS, 'svg');
     svg.setAttribute('class', 'fio' + (reduzir ? ' fio-estatico' : ''));
     svg.setAttribute('aria-hidden', 'true');
